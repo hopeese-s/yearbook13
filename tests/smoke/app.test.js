@@ -1,16 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
-import { loadEnv } from '../../src/config/env.js';
-import { createApp } from '../../src/server/app.js';
-
-export function makeTestConfig(overrides = {}) {
-  return loadEnv({ NODE_ENV: 'test', SESSION_SECRET: 't'.repeat(48), ...overrides });
-}
-
-export function makeTestApp(overrides = {}, options = {}) {
-  return createApp(makeTestConfig(overrides), options);
-}
+import { makeTestApp } from '../helpers.js';
 
 test('GET /health returns 200 with ok status', async () => {
   const res = await request(makeTestApp()).get('/health');

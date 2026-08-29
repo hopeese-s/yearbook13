@@ -8,8 +8,9 @@ const prodBase = {
   PORT: '3000',
   SESSION_SECRET: 'x'.repeat(48),
   SESSION_STORE: 'sql',
-  STORAGE_DRIVER: 'r2',
   DB_DRIVER: 'sql',
+  DB_URL: 'postgres://user:pass@host:5432/yearbook',
+  STORAGE_DRIVER: 'r2',
   GOOGLE_CLIENT_ID: 'id',
   GOOGLE_CLIENT_SECRET: 'secret',
   GOOGLE_CALLBACK_URL: 'https://example.com/auth/google/callback',
@@ -27,14 +28,20 @@ function expectConfigError(source, fragment) {
   });
 }
 
-test('development defaults load without any env vars set', () => {
-  const config = loadEnv({});
+test('unset NODE_ENV FAILS SAFE to production requirements (no silent invariant bypass)', () => {
+  expectConfigError({}, 'SESSION_STORE');
+});
+
+test('explicit development config loads with dev defaults', () => {
+  const config = loadEnv({ NODE_ENV: 'development' });
   assert.equal(config.nodeEnv, 'development');
   assert.equal(config.port, 3000);
   assert.equal(config.storage.driver, 'local');
   assert.equal(config.session.store, 'file');
   assert.equal(config.db.driver, 'json');
   assert.equal(config.limits.jsonBodyLimit, '1mb');
+  assert.equal(config.auth.driveImportEnabled, false);
+  assert.equal(config.session.secureCookies, false);
 });
 
 test('valid production config loads', () => {
@@ -68,15 +75,28 @@ test('production refuses DB_DRIVER=json', () => {
   expectConfigError({ ...prodBase, DB_DRIVER: 'json' }, 'DB_DRIVER');
 });
 
+test('production refuses missing DB_URL when DB_DRIVER=sql', () => {
+  const { DB_URL, ...withoutUrl } = prodBase;
+  expectConfigError(withoutUrl, 'DB_URL');
+});
+
 test('production refuses short or missing SESSION_SECRET', () => {
   expectConfigError({ ...prodBase, SESSION_SECRET: 'short' }, 'SESSION_SECRET');
   const { SESSION_SECRET, ...withoutSecret } = prodBase;
   expectConfigError(withoutSecret, 'SESSION_SECRET');
 });
 
-test('production refuses missing Google OAuth credentials', () => {
+test('production refuses the SESSION_SECRET placeholder from .env.example', () => {
+  expectConfigError({ ...prodBase, SESSION_SECRET: `changeme-${'x'.repeat(40)}` }, 'placeholder');
+});
+
+test('production refuses missing Google OAuth credentials (each variable)', () => {
   const { GOOGLE_CLIENT_ID, ...noId } = prodBase;
   expectConfigError(noId, 'GOOGLE_CLIENT_ID');
+  const { GOOGLE_CLIENT_SECRET, ...noSecret } = prodBase;
+  expectConfigError(noSecret, 'GOOGLE_CLIENT_SECRET');
+  const { GOOGLE_CALLBACK_URL, ...noCallback } = prodBase;
+  expectConfigError(noCallback, 'GOOGLE_CALLBACK_URL');
 });
 
 test('production refuses missing R2 credentials when STORAGE_DRIVER=r2', () => {
@@ -90,6 +110,11 @@ test('invalid enum values are rejected', () => {
   expectConfigError({ ...prodBase, SESSION_STORE: 'cookie' }, 'SESSION_STORE');
 });
 
+test('invalid PORT is rejected', () => {
+  expectConfigError({ ...prodBase, PORT: 'http' }, 'PORT');
+  expectConfigError({ ...prodBase, PORT: '0' }, 'PORT');
+});
+
 test('numeric limits are validated', () => {
   expectConfigError({ ...prodBase, MAX_UPLOAD_BYTES: 'not-a-number' }, 'MAX_UPLOAD_BYTES');
   expectConfigError({ ...prodBase, AUTH_RATE_LIMIT_WINDOW_MS: '50' }, 'AUTH_RATE_LIMIT_WINDOW_MS');
@@ -97,6 +122,11 @@ test('numeric limits are validated', () => {
 
 test('body limit format is validated', () => {
   expectConfigError({ ...prodBase, JSON_BODY_LIMIT: 'ten' }, 'JSON_BODY_LIMIT');
+});
+
+test('DRIVE_IMPORT_ENABLED is strictly validated', () => {
+  expectConfigError({ ...prodBase, DRIVE_IMPORT_ENABLED: 'yes' }, 'DRIVE_IMPORT_ENABLED');
+  assert.equal(loadEnv({ NODE_ENV: 'development', DRIVE_IMPORT_ENABLED: 'true' }).auth.driveImportEnabled, true);
 });
 
 test('admin email list is parsed and normalized', () => {

@@ -47,10 +47,39 @@ Foundation scaffold only. No feature domains implemented.
 
 ## Verification results
 
-- `npm test` -> 19/19 pass
+- `npm test` -> 25/25 pass
 - `npm run lint` (biome) -> clean
 - `npm run build:check` -> clean
 - Manual boot: server listens on :3000, GET /health -> 200 {"status":"ok"}
+
+## Reviewer round + fixes (build-plan retry policy: one batch)
+
+Reviewer verdict: CHANGES REQUIRED (1 blocker, 2 major, 4 minor, 5 nit).
+Findings fixed in one batch:
+
+1. BLOCKER - `npm test` script (`node --test tests/`) failed on this platform;
+   fixed to `node --test` (default recursive scan). Handoff claim now reproducible.
+2. MAJOR - `.env` was never loaded despite README instructions; fixed with
+   `import 'dotenv/config'` as the first line of server.js (still thin bootstrap).
+3. MAJOR - unset NODE_ENV silently defaulted to development, bypassing every
+   production invariant; fixed FAIL-SAFE: unset NODE_ENV now defaults to
+   production requirements (explicit `NODE_ENV=development` needed locally,
+   as .env.example already instructs).
+4. MINOR - DB_URL now required in production when DB_DRIVER=sql (+ test).
+5. MINOR - added missing coverage: GOOGLE_CLIENT_SECRET / GOOGLE_CALLBACK_URL
+   production branches, invalid PORT, invalid DRIVE_IMPORT_ENABLED.
+6. MINOR - production error logs now omit error messages entirely (signed URLs
+   / connection strings cannot leak); non-production logs carry the stack (+ tests).
+8. NIT - shared test helpers moved to tests/helpers.js (duplicate health test removed).
+9. NIT - DRIVE_IMPORT_ENABLED strictly validated ("true"|"false"), no silent coercion.
+10. NIT - SESSION_SECRET trimmed before length check; placeholder rejected.
+12. NIT - graceful shutdown has a 10s force-exit so deploys are deterministic.
+
+Deferred (reviewer-agreed, batched into Phase 1):
+7. Static "error handler is LAST" assertion test - to be added when real
+   routers land in Phase 1 (extraRouters seam already proves ordering behavior).
+11. Feature deps (sharp/multer/passport/...) unused in Phase 0 ship in the
+   production image; footprint was approved at Gate 0; deferred deliberately.
 
 ## Deviations / notes
 
@@ -60,6 +89,8 @@ Foundation scaffold only. No feature domains implemented.
 - BUILD-PLAN.md Phase 0 allowed-paths listed `test/smoke/`; implemented as
   `tests/` per the approved architecture tree in the final plan (§2).
 - AGENTS.md and README.md added (approved in the final plan Phase A tree).
+- NODE_ENV fail-safe default (unset = production requirements) is stricter
+  than .env.example implies; documented here and in env.js JSDoc.
 
 ## Gate 1 checklist for human approval
 

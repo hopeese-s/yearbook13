@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test tests/",
+    "test": "node --test",
     "lint": "biome lint .",
     "build:check": "npm run lint && node --check server.js"
   },

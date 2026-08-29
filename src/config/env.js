@@ -47,18 +47,23 @@ function requireBodyLimit(source, key, failures) {
 
 /**
  * Parse and validate environment variables into a frozen config object.
+ *
+ * FAIL-SAFE default: an UNSET NODE_ENV is treated as production, so a missing
+ * variable can never silently bypass the production invariants. Explicit
+ * development runs must set NODE_ENV=development (see .env.example).
+ *
  * Production invariants enforced here (boot refuses unsafe combinations):
  *   - STORAGE_DRIVER must be "r2" (local uploads are not persistent)
  *   - SESSION_STORE must be "sql" or "redis" (file/memory are dev-only)
- *   - DB_DRIVER must be "sql" (JSON metadata is dev-only)
- *   - SESSION_SECRET required, >= 32 chars
+ *   - DB_DRIVER must be "sql" and DB_URL must be set (JSON metadata is dev-only)
+ *   - SESSION_SECRET required, >= 32 chars after trim, placeholder rejected
  *   - Google OAuth credentials required (auth-only scopes; Drive is a future flow)
  *   - R2 credentials required when STORAGE_DRIVER=r2
  */
 export function loadEnv(source = process.env) {
   const failures = [];
 
-  const nodeEnv = requireEnum(source, 'NODE_ENV', NODE_ENVS, failures) ?? 'development';
+  const nodeEnv = requireEnum(source, 'NODE_ENV', NODE_ENVS, failures) ?? 'production';
   const isProd = nodeEnv === 'production';
   const isTest = nodeEnv === 'test';
 
@@ -74,8 +79,13 @@ export function loadEnv(source = process.env) {
     failures.push(`SESSION_STORE="${resolvedSessionStore}" is not persistent; production requires "sql" or "redis"`);
   }
   const sessionSecret = source.SESSION_SECRET;
-  if (isProd && (!sessionSecret || sessionSecret.length < 32)) {
-    failures.push('SESSION_SECRET is required in production and must be at least 32 characters');
+  if (isProd) {
+    const trimmed = sessionSecret?.trim();
+    if (!trimmed || trimmed.length < 32) {
+      failures.push('SESSION_SECRET is required in production and must be at least 32 characters');
+    } else if (trimmed.startsWith('changeme')) {
+      failures.push('SESSION_SECRET must be changed from the placeholder value');
+    }
   }
   const sessionDir = source.SESSION_DIR ?? 'sessions';
 
@@ -134,6 +144,9 @@ export function loadEnv(source = process.env) {
   if (isProd && resolvedDbDriver === 'json') {
     failures.push('DB_DRIVER="json" is not persistent; production requires "sql"');
   }
+  if (isProd && resolvedDbDriver === 'sql' && !(source.DB_URL ?? '').trim()) {
+    failures.push('DB_URL is required in production when DB_DRIVER="sql"');
+  }
 
   // --- Limits ---
   const jsonBodyLimit = requireBodyLimit(source, 'JSON_BODY_LIMIT', failures) ?? '1mb';
@@ -146,7 +159,12 @@ export function loadEnv(source = process.env) {
     windowMs: requireInt(source, 'UPLOAD_RATE_LIMIT_WINDOW_MS', failures, { min: 1000 }) ?? 60_000,
   };
 
-  const driveImportEnabled = (source.DRIVE_IMPORT_ENABLED ?? 'false') === 'true';
+  // --- Future Drive import (strict boolean; never silently coerced) ---
+  const driveRaw = source.DRIVE_IMPORT_ENABLED;
+  if (driveRaw !== undefined && driveRaw !== '' && !['true', 'false'].includes(driveRaw)) {
+    failures.push('DRIVE_IMPORT_ENABLED must be "true" or "false"');
+  }
+  const driveImportEnabled = driveRaw === 'true';
 
   if (failures.length > 0) throw new ConfigError(failures);
 
