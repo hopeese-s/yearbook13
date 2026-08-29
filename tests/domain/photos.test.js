@@ -33,7 +33,7 @@ test('empty input yields an empty-but-valid metadata set', () => {
   assert.deepEqual(value, {
     caption: '',
     section: '',
-    year: undefined,
+    year: null,
     personIds: [],
     collections: [],
     tags: [],

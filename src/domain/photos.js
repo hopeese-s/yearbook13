@@ -52,12 +52,12 @@ export function validatePhotoInput(input = {}) {
     errors.push(`section must be <= ${LABEL_MAX_LENGTH} characters`);
   }
 
-  let year;
+  let year = null;
   if (input.year !== undefined && input.year !== null && input.year !== '') {
     year = Number(input.year);
     if (!Number.isInteger(year) || year < 1900 || year > 2200) {
       errors.push('year must be an integer between 1900 and 2200');
-      year = undefined;
+      year = null;
     }
   }
 
