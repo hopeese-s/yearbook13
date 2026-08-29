@@ -1,0 +1,33 @@
+{
+  "name": "ims13-yearbook",
+  "version": "0.1.0",
+  "description": "IMS13 Yearbook - liquid glass photo gallery web app",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test tests/",
+    "lint": "biome lint .",
+    "build:check": "npm run lint && node --check server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "express-session": "^1.19.0",
+    "helmet": "^8.3.0",
+    "multer": "^2.3.0",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "session-file-store": "^1.5.0",
+    "sharp": "^0.35.4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.11",
+    "supertest": "^7.2.2"
+  }
+}

@@ -1,0 +1,30 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Local user data (never committed)
+uploads/
+data/
+sessions/
+
+# Logs and temp
+*.log
+logs/
+tmp/
+temp/
+.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.idea/
+*.swp
+.vscode/*
+!.vscode/settings.json
