@@ -5,6 +5,7 @@ import { createErrorHandler, notFoundHandler } from './middleware/errors.js';
 import { healthRoutes } from './routes/health.routes.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { photoRoutes } from './routes/photo.routes.js';
+import { pagesRoutes } from './routes/pages.routes.js';
 import { createUploadMiddleware } from './middleware/upload.js';
 import { createUploadService } from '../uploads/upload.service.js';
 import { createPassport } from '../auth/passport.js';
@@ -39,6 +40,7 @@ export function createApp(config, { extraRouters = [], storage, repository } = {
     healthRoutes(config),
     authRoutes(config, passport, enabled),
     photoRoutes({ config, storage: resolvedStorage, repository: resolvedRepository, uploadService, uploadMiddleware }),
+    pagesRoutes(config),
     ...extraRouters,
   ];
   for (const router of routers) app.use(router);

@@ -1,0 +1,79 @@
+/* ============================================================
+   IMS13 Yearbook — Design tokens
+   World: Liquid Glass + Neumorphism + Skeuomorphism, macOS-like.
+   Dark-first. All visual decisions flow from these tokens.
+   ============================================================ */
+
+:root {
+  /* --- Ground & scene --- */
+  --bg-0: #07080d;
+  --bg-1: #0b0d14;
+  --bg-2: #12151f;
+
+  /* --- Aurora washes (the light behind the glass) --- */
+  --aurora-blue: rgba(56, 128, 255, 0.35);
+  --aurora-violet: rgba(168, 96, 250, 0.28);
+  --aurora-pink: rgba(255, 88, 148, 0.22);
+  --aurora-teal: rgba(64, 224, 208, 0.16);
+
+  /* --- Ink --- */
+  --ink-hi: #f2f4fa;
+  --ink-mid: #b6bdd0;
+  --ink-lo: #7e869c;
+
+  /* --- Accent (iOS system blue, dark variant) --- */
+  --accent: #0a84ff;
+  --accent-soft: rgba(10, 132, 255, 0.22);
+  --danger: #ff5f6b;
+  --warn: #ffd60a;
+  --ok: #32d583;
+
+  /* --- Glass material --- */
+  --glass-fill: rgba(255, 255, 255, 0.055);
+  --glass-fill-strong: rgba(255, 255, 255, 0.09);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-edge: rgba(255, 255, 255, 0.35); /* top specular line */
+  --glass-blur: 22px;
+  --glass-saturate: 160%;
+
+  /* --- Neumorphic shadow pairs (soft extrusion on dark) --- */
+  --neu-out:
+    0 1px 0 rgba(255, 255, 255, 0.07) inset,
+    -8px -8px 20px rgba(255, 255, 255, 0.035),
+    10px 14px 32px rgba(0, 0, 0, 0.55);
+  --neu-in:
+    0 2px 5px rgba(0, 0, 0, 0.55) inset,
+    0 -1px 0 rgba(255, 255, 255, 0.05) inset;
+
+  /* --- Skeuomorphic chrome --- */
+  --titlebar-hi: rgba(255, 255, 255, 0.09);
+  --titlebar-lo: rgba(0, 0, 0, 0.28);
+  --tl-close: #ff5f57;
+  --tl-min: #febc2e;
+  --tl-max: #28c840;
+
+  /* --- Geometry --- */
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 28px;
+
+  /* --- Motion --- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast: 140ms;
+  --t-med: 260ms;
+  --t-slow: 520ms;
+
+  /* --- Type --- */
+  /* Skeuomorphic macOS: the platform's own face is the subject-correct choice. */
+  --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text',
+    'Segoe UI', Roboto, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI Variable Display',
+    'Segoe UI', Roboto, sans-serif;
+
+  /* --- Layering --- */
+  --z-aurora: 0;
+  --z-content: 10;
+  --z-window: 100;
+  --z-lightbox: 200;
+}

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>IMS13 Yearbook</title>
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/glass.css">
+  <link rel="stylesheet" href="/assets/css/focus.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <script type="importmap">
+    { "imports": { "three": "/assets/js/vendor/three.module.js" } }
+  </script>
+</head>
+<body>
+  <header class="topbar glass" id="topbar">
+    <a class="brand" href="/">IMS13 <span class="year">Yearbook</span></a>
+    <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="dock" aria-label="Menu">
+      <span></span>
+    </button>
+    <nav class="dock" id="dock" aria-label="Main">
+      <a href="/" aria-current="page">Gallery</a>
+      <a href="/admin.html">Admin</a>
+      <a href="/auth/google?returnTo=/">Sign in</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="hero" aria-label="IMS13 yearbook intro">
+      <div class="hero-copy">
+        <h1>Our class,<br><span class="glass-word">through glass.</span></h1>
+        <p>Every photo of IMS13 — kept in one place. Scroll the wall, spin the carousel, open the preview.</p>
+      </div>
+      <div class="hero-mount" id="hero-mount" aria-hidden="true"></div>
+    </section>
+
+    <section id="gallery" aria-label="Photo gallery">
+      <div class="toolbar glass">
+        <div class="chips" id="collection-chips" role="toolbar" aria-label="Filter by collection"></div>
+        <div class="spacer"></div>
+        <button class="btn" id="view-carousel" type="button">Carousel</button>
+      </div>
+
+      <div id="gallery-state" class="state-panel" aria-live="polite">
+        <div class="state-spinner" role="status"></div>
+        <span class="muted">Loading the yearbook…</span>
+      </div>
+
+      <div id="masonry" class="masonry" hidden></div>
+      <div id="carousel-root" hidden></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Photos stay on this site · IMS13 Yearbook</p>
+  </footer>
+
+  <div id="lightbox-root"></div>
+  <script type="module" src="/assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+/* Focus policy (approved R4):
+   - No default browser ring, ever.
+   - Keyboard users still get a clear, subtle glass-glow indicator.
+   - Mouse/touch users see nothing (handled by .is-keyboard on <body>). */
+
+:focus {
+  outline: none;
+}
+
+.is-keyboard :focus-visible {
+  outline: 1.5px solid rgba(150, 190, 255, 0.85);
+  outline-offset: 2px;
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 4px rgba(10, 132, 255, 0.22),
+    0 0 18px rgba(10, 132, 255, 0.35);
+}
