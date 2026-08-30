@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Admin · IMS13 Yearbook</title>
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/glass.css">
+  <link rel="stylesheet" href="/assets/css/focus.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/admin.css">
+</head>
+<body>
+  <header class="topbar glass" id="topbar">
+    <a class="brand" href="/">IMS13 <span class="year">Admin</span></a>
+    <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="dock" aria-label="Menu">
+      <span></span>
+    </button>
+    <nav class="dock" id="dock" aria-label="Main">
+      <a href="/">Gallery</a>
+      <a href="/auth/logout" id="signout">Sign out</a>
+    </nav>
+  </header>
+
+  <main>
+    <div id="admin-root">
+      <div id="auth-gate" class="auth-gate glass" hidden>
+        <p class="state-title">Admin access required</p>
+        <p class="muted">Sign in with an email on the admin allowlist to upload and manage photos.</p>
+        <a class="btn primary" href="/auth/google?returnTo=/admin.html">Sign in with Google</a>
+      </div>
+
+      <div id="admin-ui" class="admin-shell" hidden>
+        <nav class="admin-nav glass" id="admin-nav" aria-label="Admin sections">
+          <a href="#upload">Upload</a>
+          <a href="#manage">Manage photos</a>
+          <a href="#about">Info</a>
+        </nav>
+
+        <div class="admin-content">
+          <!-- ============ Upload (Steps) ============ -->
+          <section class="admin-panel glass" id="upload">
+            <h2>Upload photos</h2>
+            <span class="muted">Three quick steps: pick, describe, ship.</span>
+
+            <div class="steps" id="steps"></div>
+
+            <div class="step-pane" data-step="0">
+              <button type="button" class="dropzone" id="dropzone" aria-label="Choose photos">
+                <span><strong>Drop photos here</strong> or click to choose</span>
+                <span class="muted">JPEG · PNG · WebP — up to 10 MB each</span>
+              </button>
+              <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" multiple hidden>
+              <div class="batch-strip neu-inset" id="batch-strip">
+                <div class="insertion-caret" id="insertion-caret"></div>
+              </div>
+              <p class="muted" id="batch-hint" hidden>Drag thumbnails to set the upload order.</p>
+            </div>
+
+            <div class="step-pane" data-step="1" hidden>
+              <div class="field"><label for="f-caption">Caption</label>
+                <input id="f-caption" type="text" maxlength="300" placeholder="Sports day"></div>
+              <div class="field"><label for="f-section">Section</label>
+                <input id="f-section" type="text" maxlength="50" placeholder="IMS13"></div>
+              <div class="field"><label for="f-year">Year</label>
+                <input id="f-year" type="number" min="1900" max="2200" placeholder="2026"></div>
+              <div class="field"><label for="f-collections">Collections <span class="muted">(comma-separated)</span></label>
+                <input id="f-collections" type="text" placeholder="sports-day, field-trip"></div>
+              <div class="field"><label for="f-tags">Tags <span class="muted">(comma-separated)</span></label>
+                <input id="f-tags" type="text" placeholder="fun, friends"></div>
+              <div class="field"><label for="f-categories">Categories <span class="muted">(comma-separated)</span></label>
+                <input id="f-categories" type="text" placeholder="events"></div>
+            </div>
+
+            <div class="step-pane" data-step="2" hidden>
+              <p class="muted" id="review-summary"></p>
+              <button class="btn primary" id="upload-btn" type="button">Upload to the yearbook</button>              <div class="progress-track" id="progress-track" hidden><div class="progress-fill" id="progress-fill"></div></div>
+              <ul class="result-list" id="upload-results"></ul>
+            </div>
+
+            <div class="row-between" style="margin-top:18px">
+              <button class="btn" id="back-btn" type="button">Back</button>
+              <button class="btn primary" id="next-btn" type="button">Next</button>
+            </div>
+          </section>
+
+          <!-- ============ Manage (Multi-select + Marquee) ============ -->
+          <section class="admin-panel glass" id="manage">
+            <h2>Manage photos</h2>
+            <span class="muted">Drag on empty space to marquee-select · Ctrl/Cmd-click to toggle · Delete removes selected.</span>
+            <div class="toolbar glass" style="margin-bottom:14px">
+              <span class="muted" id="selection-count">0 selected</span>
+              <div class="spacer"></div>
+              <button class="btn" id="select-all" type="button">Select all</button>
+              <button class="btn danger" id="delete-selected" type="button" disabled>Delete selected</button>
+            </div>
+            <div class="photo-grid" id="photo-grid">
+              <div class="marquee" id="marquee"></div>
+            </div>
+            <div id="manage-state" class="state-panel" aria-live="polite"></div>
+          </section>
+
+          <!-- ============ Info ============ -->
+          <section class="admin-panel glass" id="about">
+            <h2>About this admin</h2>
+            <p class="muted">
+              Uploads run through the image pipeline (orientation fix, EXIF stripped, thumbnail generated)
+              before landing in storage. Signed in as <strong id="whoami">…</strong>
+            </p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="/assets/js/admin/admin.js"></script>
+</body>
+</html>

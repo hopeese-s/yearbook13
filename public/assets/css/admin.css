@@ -1,0 +1,336 @@
+/* Admin UI (Operate surface): scanability first, brand in the details.
+   Shares the liquid-glass world via tokens/glass/components. */
+
+.admin-shell {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.admin-nav {
+  position: sticky;
+  top: 86px;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-nav a {
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--ink-mid);
+  border-left: 2px solid transparent;
+  transition: all var(--t-fast) var(--ease-out);
+}
+
+.admin-nav a:hover {
+  color: var(--ink-hi);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Scrollspy active state */
+.admin-nav a.active {
+  color: var(--ink-hi);
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+
+.admin-panel {
+  padding: 22px;
+  margin-bottom: 22px;
+}
+
+.admin-panel h2 {
+  font-size: 1.15rem;
+  margin-bottom: 6px;
+}
+
+.admin-panel > .muted {
+  display: block;
+  margin-bottom: 16px;
+  font-size: 0.88rem;
+}
+
+/* --- Steps (upload wizard) --- */
+.steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 650;
+  color: var(--ink-lo);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  transition: all var(--t-med) var(--ease-out);
+}
+
+.step .dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: var(--neu-inset);
+}
+
+.step.current {
+  color: #fff;
+  border-color: rgba(10, 132, 255, 0.55);
+  box-shadow: 0 0 16px rgba(10, 132, 255, 0.25);
+}
+
+.step.current .dot {
+  background: var(--accent);
+  color: #fff;
+}
+
+.step.done {
+  color: var(--ok);
+}
+
+.step.done .dot {
+  background: rgba(50, 213, 131, 0.2);
+  color: var(--ok);
+}
+
+.step-arrow {
+  color: var(--ink-lo);
+  font-size: 0.8rem;
+}
+
+.step-pane[hidden] {
+  display: none;
+}
+
+/* --- Dropzone --- */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  border: 2px dashed var(--glass-border);
+  border-radius: var(--r-md);
+  padding: 38px 20px;
+  text-align: center;
+  color: var(--ink-mid);
+  transition: all var(--t-med) var(--ease-out);
+  cursor: pointer;
+}
+
+.dropzone:hover,
+.dropzone.dragover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--ink-hi);
+}
+
+/* --- Batch preview strip with insertion caret reordering --- */
+.batch-strip {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px;
+  border-radius: var(--r-md);
+  position: relative;
+  min-height: 96px;
+}
+
+.batch-item {
+  position: relative;
+  width: 92px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  cursor: grab;
+  box-shadow: var(--neu-out);
+  transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
+}
+
+.batch-item img {
+  width: 100%;
+  height: 70px;
+  object-fit: cover;
+}
+
+.batch-item.dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+
+.batch-item .batch-name {
+  display: block;
+  font-size: 0.62rem;
+  color: var(--ink-mid);
+  padding: 3px 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* The insertion caret: a glowing line where the item will land. */
+.insertion-caret {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(10, 132, 255, 0.8);
+  transition: left var(--t-fast) var(--ease-out);
+  pointer-events: none;
+  display: none;
+}
+
+.insertion-caret.visible {
+  display: block;
+}
+
+/* --- Multi-select photo grid + marquee --- */
+.photo-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  min-height: 120px;
+}
+
+.grid-item {
+  position: relative;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: var(--neu-out);
+  transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
+}
+
+.grid-item img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.grid-item.selected {
+  box-shadow: 0 0 0 2.5px var(--accent), 0 0 18px rgba(10, 132, 255, 0.45);
+  transform: scale(0.98);
+}
+
+.grid-item.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.75rem;
+  display: grid;
+  place-items: center;
+}
+
+.grid-item .item-caption {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--ink-mid);
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, 0.42);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Marquee selection rectangle */
+.marquee {
+  position: absolute;
+  border: 1.5px solid var(--accent);
+  background: rgba(10, 132, 255, 0.14);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 5;
+  display: none;
+}
+
+/* --- Upload progress --- */
+.progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: var(--neu-inset);
+  overflow: hidden;
+  margin: 12px 0;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), #7cc0ff);
+  transition: width var(--t-med) var(--ease-out);
+}
+
+.result-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.result-list li {
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.result-list li.ok {
+  color: var(--ok);
+}
+
+.result-list li.fail {
+  color: var(--danger);
+}
+
+/* --- Auth gate --- */
+.auth-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+@media (max-width: 860px) {
+  .admin-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-nav {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .admin-nav a {
+    white-space: nowrap;
+  }
+}
