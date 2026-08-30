@@ -21,6 +21,23 @@
   letter-spacing: -0.02em;
   white-space: nowrap;
   padding-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  color: var(--ink-on-accent);
+  background: var(--accent-lime);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: -0.06em;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset, 0 5px 16px rgba(215, 255, 82, 0.16);
 }
 
 .brand .year {
@@ -60,7 +77,7 @@
 .dock a[aria-current='page'] {
   color: #fff;
   background: var(--accent-soft);
-  box-shadow: 0 0 0 1px rgba(10, 132, 255, 0.4) inset;
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.4) inset;
 }
 
 /* Hamburger (mobile) */
@@ -187,8 +204,8 @@
 .chip.active {
   color: #fff;
   background: var(--accent-soft);
-  border-color: rgba(10, 132, 255, 0.5);
-  box-shadow: 0 0 14px rgba(10, 132, 255, 0.3);
+  border-color: rgba(var(--accent-rgb), 0.5);
+  box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.3);
 }
 
 /* --- Toolbar --- */
@@ -217,6 +234,34 @@
   box-shadow: var(--neu-out);
 }
 
+.hero-archive {
+  min-height: 548px;
+  isolation: isolate;
+  background:
+    linear-gradient(112deg, rgba(20, 25, 42, 0.92) 0%, rgba(10, 13, 23, 0.66) 47%, rgba(15, 18, 30, 0.28) 100%),
+    radial-gradient(circle at 77% 45%, rgba(91, 167, 255, 0.18), transparent 31%),
+    radial-gradient(circle at 91% 8%, rgba(155, 123, 255, 0.22), transparent 24%),
+    var(--bg-1);
+}
+
+.hero-archive::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.5;
+  background: linear-gradient(118deg, transparent 0 58%, rgba(215, 255, 82, 0.16) 58.1%, transparent 58.3%);
+}
+
+.hero-archive::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.13), transparent 24%, transparent 72%, rgba(155, 123, 255, 0.09));
+}
+
 .hero-canvas,
 .hero-fallback {
   position: absolute;
@@ -230,6 +275,7 @@
   transform: translateY(-50%);
   max-width: 480px;
   pointer-events: none;
+  z-index: 2;
 }
 
 .hero-copy h1 {
@@ -239,16 +285,113 @@
 }
 
 .hero-copy h1 .glass-word {
-  background: linear-gradient(120deg, #9ecbff, #e0c7ff 55%, #ffb3cd);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--accent-lime);
+  text-shadow: 0 0 34px rgba(215, 255, 82, 0.14);
 }
 
 .hero-copy p {
   color: var(--ink-mid);
   margin: 12px 0 0;
   font-size: 1.02rem;
+}
+
+.hero-action {
+  pointer-events: auto;
+  margin-top: 28px;
+  color: var(--ink-on-accent);
+  background: var(--accent-lime);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 16px 32px rgba(215, 255, 82, 0.14);
+}
+
+.hero-index {
+  position: absolute;
+  right: 26px;
+  bottom: 24px;
+  display: grid;
+  gap: 2px;
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 0.67rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  z-index: 2;
+}
+
+.hero-index span:first-child {
+  color: var(--accent-lime);
+  font-weight: 800;
+}
+
+.hero-gridline {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 42%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-lime));
+  opacity: 0.55;
+}
+
+.hero-mount {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hero-mount canvas,
+.hero-mount .hero-fallback {
+  pointer-events: auto;
+}
+
+.wall-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 54px 0 16px;
+}
+
+.wall-heading .section-title {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  letter-spacing: var(--display-tracking);
+}
+
+.wall-caption {
+  margin: 4px 0 0;
+  color: var(--ink-lo);
+  font-size: 0.93rem;
+}
+
+.wall-count {
+  color: var(--accent-lime);
+  font-size: 0.74rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.wall-toolbar {
+  border-radius: 999px;
+  padding: 8px 10px;
+  margin-bottom: 16px;
+}
+
+.view-toggle {
+  padding: 9px 14px;
+  font-size: 0.83rem;
+}
+
+.view-glyph {
+  width: 15px;
+  height: 15px;
+  display: inline-block;
+  background:
+    linear-gradient(var(--ink-hi) 0 0) 0 0 / 6px 6px no-repeat,
+    linear-gradient(var(--ink-hi) 0 0) 9px 0 / 6px 6px no-repeat,
+    linear-gradient(var(--ink-hi) 0 0) 0 9px / 6px 6px no-repeat,
+    linear-gradient(var(--ink-hi) 0 0) 9px 9px / 6px 6px no-repeat;
+  opacity: 0.8;
 }
 
 /* --- Cards (photo tiles) --- */
@@ -502,7 +645,7 @@
 
 .filmstrip img.current {
   opacity: 1;
-  box-shadow: 0 0 0 2px var(--accent), 0 0 16px rgba(10, 132, 255, 0.4);
+  box-shadow: 0 0 0 2px var(--accent), 0 0 16px rgba(var(--accent-rgb), 0.4);
   transform: translateY(-2px);
 }
 
@@ -539,8 +682,30 @@
     min-height: 360px;
   }
 
+  .hero-archive {
+    min-height: 470px;
+  }
+
   .hero-copy {
     max-width: 320px;
+  }
+
+  .hero-copy h1 {
+    font-size: clamp(3rem, 15vw, 4.5rem);
+  }
+
+  .hero-mount {
+    opacity: 0.68;
+  }
+
+  .wall-heading {
+    align-items: start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .wall-count {
+    margin: 0;
   }
 
   .mac-window {

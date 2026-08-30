@@ -167,7 +167,7 @@ document.getElementById('upload-btn').addEventListener('click', () => {
   const results = document.getElementById('upload-results');
   const button = document.getElementById('upload-btn');
   track.hidden = false;
-  fill.style.width = '0%';
+  fill.style.transform = 'scaleX(0)';
   results.replaceChildren();
   button.disabled = true;
 
@@ -184,7 +184,7 @@ document.getElementById('upload-btn').addEventListener('click', () => {
   const xhr = new XMLHttpRequest();
   xhr.open('POST', '/api/photos');
   xhr.upload.addEventListener('progress', (event) => {
-    if (event.lengthComputable) fill.style.width = `${Math.round((event.loaded / event.total) * 100)}%`;
+    if (event.lengthComputable) fill.style.transform = `scaleX(${event.loaded / event.total})`;
   });
   xhr.addEventListener('load', () => {
     button.disabled = false;

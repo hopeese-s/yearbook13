@@ -1,17 +1,15 @@
 // Thin bootstrap ONLY: compose dependencies -> build app -> listen.
 // All logic lives in src/ (see BUILD-PLAN.md architecture contract).
 import 'dotenv/config';
-import path from 'node:path';
 import { loadEnv } from './src/config/env.js';
 import { createApp } from './src/server/app.js';
 import { createStorage } from './src/storage/index.js';
-import { createJsonRepository } from './src/data/json.repository.js';
-import { paths } from './src/config/paths.js';
+import { createRepository } from './src/data/index.js';
 import { logger } from './src/util/logger.js';
 
 const config = loadEnv();
 const storage = await createStorage(config);
-const repository = createJsonRepository({ file: path.join(paths.data(config), 'photos.json') });
+const repository = await createRepository(config);
 const app = await createApp(config, { storage, repository });
 
 const server = app.listen(config.port, () => {

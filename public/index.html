@@ -16,31 +16,42 @@
 </head>
 <body>
   <header class="topbar glass" id="topbar">
-    <a class="brand" href="/">IMS13 <span class="year">Yearbook</span></a>
+    <a class="brand" href="/" aria-label="IMS13 Yearbook home"><span class="brand-mark">13</span><span>IMS13</span> <span class="year">/ archive</span></a>
     <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="dock" aria-label="Menu">
       <span></span>
     </button>
     <nav class="dock" id="dock" aria-label="Main">
-      <a href="/" aria-current="page">Gallery</a>
-      <a href="/admin.html">Admin</a>
-      <a href="/auth/google?returnTo=/">Sign in</a>
+      <a href="#gallery" aria-current="page">The wall</a>
+      <a href="#carousel-root" id="carousel-nav">Carousel</a>
+      <a href="/admin.html">Curator desk</a>
+      <a class="nav-signin" href="/auth/google?returnTo=/">Sign in</a>
     </nav>
   </header>
 
   <main>
-    <section class="hero" id="hero" aria-label="IMS13 yearbook intro">
+    <section class="hero hero-archive" id="hero" aria-label="IMS13 yearbook intro">
       <div class="hero-copy">
-        <h1>Our class,<br><span class="glass-word">through glass.</span></h1>
-        <p>Every photo of IMS13 — kept in one place. Scroll the wall, spin the carousel, open the preview.</p>
+        <h1>We were<br><span class="glass-word">here.</span></h1>
+        <p>Faces, places, and the small electric moments that made our class a class.</p>
+        <a class="btn primary hero-action" href="#gallery">Enter the wall <span aria-hidden="true">↘</span></a>
       </div>
+      <div class="hero-index" aria-hidden="true"><span>IMS13</span><span>EST. 2026</span></div>
       <div class="hero-mount" id="hero-mount" aria-hidden="true"></div>
+      <div class="hero-gridline" aria-hidden="true"></div>
     </section>
 
     <section id="gallery" aria-label="Photo gallery">
-      <div class="toolbar glass">
+      <div class="wall-heading">
+        <div>
+          <h2 class="section-title">The wall</h2>
+          <p class="wall-caption">A living contact sheet of our year.</p>
+        </div>
+        <p class="wall-count" id="wall-count">— photographs</p>
+      </div>
+      <div class="toolbar glass wall-toolbar">
         <div class="chips" id="collection-chips" role="toolbar" aria-label="Filter by collection"></div>
         <div class="spacer"></div>
-        <button class="btn" id="view-carousel" type="button">Carousel</button>
+        <button class="btn view-toggle" id="view-carousel" type="button"><span class="view-glyph" aria-hidden="true"></span> <span id="view-label">Carousel</span></button>
       </div>
 
       <div id="gallery-state" class="state-panel" aria-live="polite">

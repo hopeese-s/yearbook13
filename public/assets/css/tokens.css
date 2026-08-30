@@ -22,8 +22,11 @@
   --ink-lo: #7e869c;
 
   /* --- Accent (iOS system blue, dark variant) --- */
-  --accent: #0a84ff;
-  --accent-soft: rgba(10, 132, 255, 0.22);
+  --accent: #5ba7ff;
+  --accent-rgb: 91, 167, 255;
+  --accent-soft: rgba(91, 167, 255, 0.18);
+  --accent-electric: #9b7bff;
+  --accent-lime: #d7ff52;
   --danger: #ff5f6b;
   --warn: #ffd60a;
   --ok: #32d583;
@@ -76,4 +79,9 @@
   --z-content: 10;
   --z-window: 100;
   --z-lightbox: 200;
+
+  /* --- Archive chrome --- */
+  --hairline: rgba(255, 255, 255, 0.11);
+  --ink-on-accent: #08101e;
+  --display-tracking: -0.055em;
 }

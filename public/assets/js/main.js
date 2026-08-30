@@ -15,12 +15,16 @@ const masonryRoot = document.getElementById('masonry');
 const carouselRoot = document.getElementById('carousel-root');
 const chipsRoot = document.getElementById('collection-chips');
 const viewToggle = document.getElementById('view-carousel');
+const viewLabel = document.getElementById('view-label');
+const carouselNav = document.getElementById('carousel-nav');
 const heroMount = document.getElementById('hero-mount');
+const wallCount = document.getElementById('wall-count');
 
 initFocusPolicy();
 initMenu();
 
 let allPhotos = [];
+let galleryTotal = 0;
 let activeCollection = '';
 let carousel = null;
 let carouselOn = false;
@@ -43,8 +47,21 @@ function renderGallery() {
   const photos = activeCollection
     ? allPhotos.filter((photo) => photo.collections?.some((c) => c.toLowerCase() === activeCollection.toLowerCase()))
     : allPhotos;
+  const countLabel = photos.length === 1 ? 'photograph' : 'photographs';
+  wallCount.textContent =
+    photos.length === galleryTotal ? `${galleryTotal} ${countLabel}` : `${photos.length} shown · ${galleryTotal} total`;
 
   if (carouselOn) {
+    if (photos.length === 0) {
+      carouselRoot.hidden = true;
+      masonryRoot.hidden = false;
+      renderState(statePanel, {
+        kind: 'empty',
+        title: 'No photos in this collection',
+        detail: 'Choose another collection to return to the wall.',
+      });
+      return;
+    }
     masonryRoot.hidden = true;
     if (carousel) carousel.destroy();
     carousel = createCarousel(carouselRoot, photos, { onOpen: openPreview });
@@ -58,17 +75,24 @@ function renderGallery() {
 }
 
 function setViewCarousel(on) {
+  if (!galleryTotal) return;
   carouselOn = on;
-  viewToggle.textContent = on ? 'Wall' : 'Carousel';
+  viewLabel.textContent = on ? 'Wall' : 'Carousel';
   renderGallery();
 }
 
 viewToggle.addEventListener('click', () => setViewCarousel(!carouselOn));
+carouselNav.addEventListener('click', (event) => {
+  event.preventDefault();
+  setViewCarousel(true);
+  carouselRoot.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
 
 async function boot() {
   try {
     const result = await getPhotos({ limit: 120 });
     allPhotos = result.items ?? [];
+    galleryTotal = Number(result.total ?? allPhotos.length);
     preview.replacePhotos?.(allPhotos);
 
     if (allPhotos.length === 0) {

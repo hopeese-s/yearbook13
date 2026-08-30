@@ -27,6 +27,35 @@ body {
   overflow-x: hidden;
 }
 
+body::selection {
+  color: var(--ink-on-accent);
+  background: var(--accent-lime);
+}
+
+::selection {
+  color: var(--ink-on-accent);
+  background: var(--accent-lime);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-0);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border: 3px solid var(--bg-0);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 /* Film-grain so the glass has something real to refract. */
 body::before {
   content: '';
@@ -44,6 +73,10 @@ h3 {
   font-family: var(--font-display);
   letter-spacing: -0.02em;
   margin: 0;
+}
+
+h1 {
+  letter-spacing: var(--display-tracking);
 }
 
 a {

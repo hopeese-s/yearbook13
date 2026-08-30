@@ -145,8 +145,11 @@ export function loadEnv(source = process.env) {
   if (isProd && resolvedDbDriver === 'json') {
     failures.push('DB_DRIVER="json" is not persistent; production requires "sql"');
   }
-  if (isProd && resolvedDbDriver === 'sql' && !(source.DB_URL ?? '').trim()) {
-    failures.push('DB_URL is required in production when DB_DRIVER="sql"');
+  const dbUrl = typeof source.DB_URL === 'string' ? source.DB_URL.trim() : '';
+  const railwayDbUrl = typeof source.DATABASE_URL === 'string' ? source.DATABASE_URL.trim() : '';
+  const databaseUrl = dbUrl || railwayDbUrl;
+  if (isProd && resolvedDbDriver === 'sql' && !databaseUrl.trim()) {
+    failures.push('DB_URL or DATABASE_URL is required in production when DB_DRIVER="sql"');
   }
 
   // --- Limits ---
@@ -201,7 +204,7 @@ export function loadEnv(source = process.env) {
       maxUploadsPerRequest,
       r2: Object.freeze(r2),
     }),
-    db: Object.freeze({ driver: resolvedDbDriver, url: source.DB_URL ?? '' }),
+    db: Object.freeze({ driver: resolvedDbDriver, url: databaseUrl }),
     limits: Object.freeze({ jsonBodyLimit, authRateLimit, uploadRateLimit }),
   });
 }

@@ -1,4 +1,3 @@
-import path from 'node:path';
 import express from 'express';
 import { applySecurity } from './middleware/security.js';
 import { createErrorHandler, notFoundHandler } from './middleware/errors.js';
@@ -10,9 +9,8 @@ import { createUploadMiddleware } from './middleware/upload.js';
 import { createUploadService } from '../uploads/upload.service.js';
 import { createPassport } from '../auth/passport.js';
 import { sessionMiddleware } from '../auth/session.js';
-import { createLocalStorage } from '../storage/local.driver.js';
-import { createJsonRepository } from '../data/json.repository.js';
-import { paths } from '../config/paths.js';
+import { createStorage } from '../storage/index.js';
+import { createRepository } from '../data/index.js';
 
 /**
  * Assemble the Express app. No business logic lives here.
@@ -22,6 +20,13 @@ import { paths } from '../config/paths.js';
  * Dependencies (storage/repository) are injected; the sync local/JSON pair
  * is the development default. `extraRouters` is an explicit test seam.
  */
+export async function resolveAppDependencies(config, { storage, repository } = {}) {
+  return {
+    storage: storage ?? (await createStorage(config)),
+    repository: repository ?? (await createRepository(config)),
+  };
+}
+
 export async function createApp(config, { extraRouters = [], storage, repository } = {}) {
   const app = express();
 
@@ -31,8 +36,9 @@ export async function createApp(config, { extraRouters = [], storage, repository
   app.use(passport.initialize());
   app.use(passport.session());
 
-  const resolvedStorage = storage ?? createLocalStorage(config);
-  const resolvedRepository = repository ?? createJsonRepository({ file: path.join(paths.data(config), 'photos.json') });
+  const dependencies = await resolveAppDependencies(config, { storage, repository });
+  const resolvedStorage = dependencies.storage;
+  const resolvedRepository = dependencies.repository;
   const uploadService = createUploadService({ storage: resolvedStorage, repository: resolvedRepository });
   const uploadMiddleware = createUploadMiddleware(config);
 

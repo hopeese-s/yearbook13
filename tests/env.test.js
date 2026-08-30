@@ -80,6 +80,17 @@ test('production refuses missing DB_URL when DB_DRIVER=sql', () => {
   expectConfigError(withoutUrl, 'DB_URL');
 });
 
+test('Railway DATABASE_URL is accepted as the DB_URL fallback', () => {
+  const { DB_URL, ...withoutDbUrl } = prodBase;
+  const config = loadEnv({ ...withoutDbUrl, DATABASE_URL: 'postgres://railway.internal/yearbook' });
+  assert.equal(config.db.url, 'postgres://railway.internal/yearbook');
+});
+
+test('blank DB_URL falls through to DATABASE_URL', () => {
+  const config = loadEnv({ ...prodBase, DB_URL: '   ', DATABASE_URL: 'postgres://railway.internal/yearbook' });
+  assert.equal(config.db.url, 'postgres://railway.internal/yearbook');
+});
+
 test('production refuses short or missing SESSION_SECRET', () => {
   expectConfigError({ ...prodBase, SESSION_SECRET: 'short' }, 'SESSION_SECRET');
   const { SESSION_SECRET, ...withoutSecret } = prodBase;
