@@ -5,7 +5,7 @@ Branch: feat/foundation
 
 ## Verification results (Phase 8)
 
-- `npm ci` → clean install from lockfile, 0 vulnerabilities
+- `npm ci` → clean install from lockfile, 0 vulnerabilities (local verification)
 - `npm test` → 104/104 pass (0.8s)
 - `npm run build:check` → clean (Biome over 71 files + node --check server.js)
 - Dev boot + HTTP smoke: `/` 200, `/admin.html` 200, `/api/photos` list OK,
@@ -31,9 +31,10 @@ Branch: feat/foundation
 
 ## Deployment prep (Phase 9 artifacts)
 
-- `railway.json`: build `npm ci && npm run build:check && npm prune --omit=dev`,
-  start `npm start`, healthcheck `/health`, restart policy — Sharp verified via
-  prebuilt binary locally; NO unconditional libvips (add only if Railway proves it)
+- `railway.json`: build `npm install --include=dev --no-audit --no-fund && npm run build:check && npm prune --omit=dev`,
+  start `npm start`, healthcheck `/health`, restart policy. Railway uses install
+  instead of ci because its cached `/app/node_modules/.cache` can be locked during
+  ci cleanup (`EBUSY`); Sharp is still prebuilt-first with NO unconditional libvips.
 - `docs/deployment/DEPLOYMENT.md`: env checklist, deploy steps, Gate 5 verification
   checklist, rollback, known limits
 - `.env.example`: complete deployment checklist (no real secrets)

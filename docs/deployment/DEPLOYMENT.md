@@ -20,14 +20,17 @@ Boot REFUSES to start if any invariant is violated — this is the persistence g
 ## Build & start (railway.json)
 
 ```
-buildCommand: npm ci && npm run build:check && npm prune --omit=dev
+buildCommand: npm install --include=dev --no-audit --no-fund && npm run build:check && npm prune --omit=dev
 startCommand: npm start
 healthcheck:  GET /health (30s timeout)
 restart:      ON_FAILURE, max 3
 ```
 
-Why: `npm ci` installs devDependencies so `build:check` (Biome + syntax gate) can run,
-then `npm prune --omit=dev` slims the runtime image. No system `libvips` packages are
+Why: `npm install --include=dev` uses the lockfile while keeping Railway's cached
+`node_modules` intact; this avoids the `EBUSY node_modules/.cache` failure from `npm ci`
+and guarantees `build:check` has Biome available even when Railway sets a production
+npm config. `--no-audit --no-fund` removes unrelated network work, then
+`npm prune --omit=dev` slims the runtime image. No system `libvips` packages are
 configured — Sharp ships prebuilt binaries; add an apt package ONLY if the Railway
 build log proves a libvips/linking failure (then rebuild and record it here).
 
