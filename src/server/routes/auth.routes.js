@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { createRateLimiter } from '../middleware/rateLimit.js';
 
 // AUTH ONLY scopes. Google Drive permissions must NEVER be added here;
@@ -6,9 +6,19 @@ import { createRateLimiter } from '../middleware/rateLimit.js';
 // (see src/auth/drive.js, future, behind DRIVE_IMPORT_ENABLED).
 export const AUTH_SCOPES = ['openid', 'email', 'profile'];
 
-const OAUTH_NOT_CONFIGURED = {
-  error: { code: 'OAUTH_NOT_CONFIGURED', message: 'Google sign-in is not configured on this server' },
-};
+/** Names the exact missing env vars so a 503 is actionable, not cryptic. */
+function oauthNotConfigured(config) {
+  const missing = [
+    ...(config.auth.google.clientId ? [] : ['GOOGLE_CLIENT_ID']),
+    ...(config.auth.google.clientSecret ? [] : ['GOOGLE_CLIENT_SECRET']),
+  ];
+  return {
+    error: {
+      code: 'OAUTH_NOT_CONFIGURED',
+      message: `Google sign-in is not configured on this server. Set ${missing.join(' and ')} in your hosting environment, then redeploy.`,
+    },
+  };
+}
 
 function safeReturnTo(value) {
   // Reject protocol-relative ('//x') AND backslash forms ('/\x') which
@@ -35,7 +45,7 @@ export function authRoutes(config, passportInstance, oauthEnabled) {
   const limiter = createRateLimiter(config.limits.authRateLimit);
 
   router.get('/auth/google', limiter, (req, res, next) => {
-    if (!oauthEnabled) return res.status(503).json(OAUTH_NOT_CONFIGURED);
+    if (!oauthEnabled) return res.status(503).json(oauthNotConfigured(config));
     req.session.returnTo = safeReturnTo(req.query.returnTo);
     passportInstance.authenticate('google', { scope: AUTH_SCOPES, callbackURL: resolveCallbackUrl(config, req) })(
       req,
@@ -45,7 +55,7 @@ export function authRoutes(config, passportInstance, oauthEnabled) {
   });
 
   router.get('/auth/google/callback', limiter, (req, res, next) => {
-    if (!oauthEnabled) return res.status(503).json(OAUTH_NOT_CONFIGURED);
+    if (!oauthEnabled) return res.status(503).json(oauthNotConfigured(config));
     passportInstance.authenticate(
       'google',
       { callbackURL: resolveCallbackUrl(config, req) },
@@ -70,7 +80,7 @@ export function authRoutes(config, passportInstance, oauthEnabled) {
     res.status(401).json({ error: { code: 'AUTH_FAILED', message: 'Google sign-in failed or was cancelled' } });
   });
 
-  // POST /auth/logout — XHR / fetch path; returns JSON {ok:true}.
+  // POST /auth/logout â€” XHR / fetch path; returns JSON {ok:true}.
   router.post('/auth/logout', (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);
@@ -78,7 +88,7 @@ export function authRoutes(config, passportInstance, oauthEnabled) {
     });
   });
 
-  // GET /auth/logout — anchor / redirect path used by the admin.html sign-out
+  // GET /auth/logout â€” anchor / redirect path used by the admin.html sign-out
   // link. Destroys the session then redirects to home.
   router.get('/auth/logout', (req, res, next) => {
     req.logout((err) => {
@@ -97,7 +107,7 @@ export function authRoutes(config, passportInstance, oauthEnabled) {
     });
   });
 
-  // GET /auth/me — returns the current user object or 401.
+  // GET /auth/me â€” returns the current user object or 401.
   // Used by admin.js to identify who is signed in.
   router.get('/auth/me', (req, res) => {
     if (!req.user) {
