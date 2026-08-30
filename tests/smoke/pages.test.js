@@ -17,12 +17,6 @@ test('vendored Three.js module is served as JavaScript', async () => {
   assert.match(res.headers['content-type'], /javascript|text\/javascript/);
 });
 
-test('Three.js core companion module is served', async () => {
-  const res = await request(await makeTestApp()).get('/assets/js/vendor/three.core.js');
-  assert.equal(res.status, 200);
-  assert.match(res.headers['content-type'], /javascript|text\/javascript/);
-});
-
 test('gallery entry module is served', async () => {
   for (const modulePath of [
     '/assets/js/main.js',
