@@ -7,7 +7,7 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
@@ -28,13 +28,13 @@ body {
 }
 
 body::selection {
-  color: var(--ink-on-accent);
-  background: var(--accent-lime);
+  color: #fff;
+  background: var(--accent);
 }
 
 ::selection {
-  color: var(--ink-on-accent);
-  background: var(--accent-lime);
+  color: #fff;
+  background: var(--accent);
 }
 
 ::-webkit-scrollbar {
@@ -47,13 +47,13 @@ body::selection {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.18);
   border: 3px solid var(--bg-0);
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.32);
 }
 
 /* Film-grain so the glass has something real to refract. */
@@ -63,7 +63,7 @@ body::before {
   inset: 0;
   z-index: var(--z-aurora);
   pointer-events: none;
-  opacity: 0.5;
+  opacity: 0.3;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
 }
 
@@ -143,7 +143,7 @@ main {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 3px solid rgba(255, 255, 255, 0.12);
+  border: 3px solid rgba(0, 0, 0, 0.08);
   border-top-color: var(--accent);
   animation: spin 0.9s linear infinite;
 }

@@ -63,9 +63,9 @@ export function studioEnvironment(renderer, scene) {
   canvas.height = 256;
   const ctx = canvas.getContext('2d');
   const gradient = ctx.createLinearGradient(0, 0, 0, 256);
-  gradient.addColorStop(0, '#2a3b66');
-  gradient.addColorStop(0.5, '#141824');
-  gradient.addColorStop(1, '#07080d');
+  gradient.addColorStop(0, '#e3ecf8');
+  gradient.addColorStop(0.5, '#fafbfd');
+  gradient.addColorStop(1, '#e9e6f2');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 16, 256);
   const gradientTexture = new THREE.CanvasTexture(canvas);

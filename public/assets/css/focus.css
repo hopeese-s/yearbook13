@@ -8,10 +8,10 @@
 }
 
 .is-keyboard :focus-visible {
-  outline: 1.5px solid rgba(150, 190, 255, 0.85);
+  outline: 1.5px solid rgba(0, 113, 227, 0.75);
   outline-offset: 2px;
   border-radius: 6px;
   box-shadow:
-    0 0 0 4px rgba(var(--accent-rgb), 0.22),
-    0 0 18px rgba(var(--accent-rgb), 0.35);
+    0 0 0 4px rgba(var(--accent-rgb), 0.15),
+    0 0 18px rgba(var(--accent-rgb), 0.22);
 }

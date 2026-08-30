@@ -1,56 +1,54 @@
 /* ============================================================
    IMS13 Yearbook — Design tokens
-   World: Liquid Glass + Neumorphism + Skeuomorphism, macOS-like.
-   Dark-first. All visual decisions flow from these tokens.
+   World: minimal white. Liquid Glass buttons + macOS-like chrome.
+   All visual decisions flow from these tokens.
    ============================================================ */
 
 :root {
   /* --- Ground & scene --- */
-  --bg-0: #07080d;
-  --bg-1: #0b0d14;
-  --bg-2: #12151f;
+  --bg-0: #f5f5f7;
+  --bg-1: #ffffff;
+  --bg-2: #eeeef0;
 
-  /* --- Aurora washes (the light behind the glass) --- */
-  --aurora-blue: rgba(56, 128, 255, 0.35);
-  --aurora-violet: rgba(168, 96, 250, 0.28);
-  --aurora-pink: rgba(255, 88, 148, 0.22);
-  --aurora-teal: rgba(64, 224, 208, 0.16);
+  /* --- Aurora washes (barely-there color behind the glass) --- */
+  --aurora-blue: rgba(10, 132, 255, 0.09);
+  --aurora-violet: rgba(94, 92, 230, 0.07);
+  --aurora-pink: rgba(255, 88, 148, 0.05);
+  --aurora-teal: rgba(64, 224, 208, 0.05);
 
   /* --- Ink --- */
-  --ink-hi: #f2f4fa;
-  --ink-mid: #b6bdd0;
-  --ink-lo: #7e869c;
+  --ink-hi: #1d1d1f;
+  --ink-mid: #48484d;
+  --ink-lo: #6e6e73;
 
-  /* --- Accent (iOS system blue, dark variant) --- */
-  --accent: #5ba7ff;
-  --accent-rgb: 91, 167, 255;
-  --accent-soft: rgba(91, 167, 255, 0.18);
-  --accent-electric: #9b7bff;
-  --accent-lime: #d7ff52;
-  --danger: #ff5f6b;
-  --warn: #ffd60a;
-  --ok: #32d583;
+  /* --- Accent (clean Apple blue) --- */
+  --accent: #0071e3;
+  --accent-rgb: 0, 113, 227;
+  --accent-soft: rgba(0, 113, 227, 0.1);
+  --danger: #d92d3f;
+  --warn: #8a6a00;
+  --ok: #1e9e63;
 
-  /* --- Glass material --- */
-  --glass-fill: rgba(255, 255, 255, 0.055);
-  --glass-fill-strong: rgba(255, 255, 255, 0.09);
-  --glass-border: rgba(255, 255, 255, 0.14);
-  --glass-edge: rgba(255, 255, 255, 0.35); /* top specular line */
+  /* --- Liquid Glass material (light surfaces) --- */
+  --glass-fill: rgba(255, 255, 255, 0.6);
+  --glass-fill-strong: rgba(255, 255, 255, 0.78);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-edge: rgba(255, 255, 255, 0.85);
   --glass-blur: 22px;
   --glass-saturate: 160%;
 
-  /* --- Neumorphic shadow pairs (soft extrusion on dark) --- */
+  /* --- Neumorphic shadow pairs (soft, diffuse on white) --- */
   --neu-out:
-    0 1px 0 rgba(255, 255, 255, 0.07) inset,
-    -8px -8px 20px rgba(255, 255, 255, 0.035),
-    10px 14px 32px rgba(0, 0, 0, 0.55);
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 10px 30px rgba(0, 0, 0, 0.08);
   --neu-inset:
-    0 2px 5px rgba(0, 0, 0, 0.55) inset,
-    0 -1px 0 rgba(255, 255, 255, 0.05) inset;
+    0 2px 6px rgba(0, 0, 0, 0.07) inset,
+    0 -1px 0 rgba(255, 255, 255, 0.8) inset;
 
   /* --- Skeuomorphic chrome --- */
-  --titlebar-hi: rgba(255, 255, 255, 0.09);
-  --titlebar-lo: rgba(0, 0, 0, 0.28);
+  --titlebar-hi: rgba(255, 255, 255, 0.65);
+  --titlebar-lo: rgba(0, 0, 0, 0.03);
   --tl-close: #ff5f57;
   --tl-min: #febc2e;
   --tl-max: #28c840;
@@ -81,7 +79,7 @@
   --z-lightbox: 200;
 
   /* --- Archive chrome --- */
-  --hairline: rgba(255, 255, 255, 0.11);
-  --ink-on-accent: #08101e;
+  --hairline: rgba(0, 0, 0, 0.08);
+  --ink-on-accent: #ffffff;
   --display-tracking: -0.055em;
 }
