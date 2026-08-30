@@ -12,7 +12,7 @@ import { logger } from './src/util/logger.js';
 const config = loadEnv();
 const storage = await createStorage(config);
 const repository = createJsonRepository({ file: path.join(paths.data(config), 'photos.json') });
-const app = createApp(config, { storage, repository });
+const app = await createApp(config, { storage, repository });
 
 const server = app.listen(config.port, () => {
   logger.info(`ims13-yearbook listening on :${config.port} (${config.nodeEnv})`);

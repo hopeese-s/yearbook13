@@ -1,10 +1,10 @@
-import { test } from 'node:test';
+﻿import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import { makeTestApp } from '../helpers.js';
 
 test('GET / serves the public gallery shell', async () => {
-  const res = await request(makeTestApp()).get('/');
+  const res = await request(await makeTestApp()).get('/');
   assert.equal(res.status, 200);
   assert.match(res.headers['content-type'], /text\/html/);
   assert.ok(res.text.includes('IMS13'), 'shell must carry the brand');
@@ -12,7 +12,7 @@ test('GET / serves the public gallery shell', async () => {
 });
 
 test('vendored Three.js module is served as JavaScript', async () => {
-  const res = await request(makeTestApp()).get('/assets/js/vendor/three.module.js');
+  const res = await request(await makeTestApp()).get('/assets/js/vendor/three.module.js');
   assert.equal(res.status, 200);
   assert.match(res.headers['content-type'], /javascript|text\/javascript/);
 });
@@ -31,7 +31,7 @@ test('gallery entry module is served', async () => {
     '/assets/js/ui/menu.js',
     '/assets/js/api.js',
   ]) {
-    const res = await request(makeTestApp()).get(modulePath);
+    const res = await request(await makeTestApp()).get(modulePath);
     assert.equal(res.status, 200, `${modulePath} must be served`);
   }
 });

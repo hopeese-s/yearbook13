@@ -22,11 +22,11 @@ import { paths } from '../config/paths.js';
  * Dependencies (storage/repository) are injected; the sync local/JSON pair
  * is the development default. `extraRouters` is an explicit test seam.
  */
-export function createApp(config, { extraRouters = [], storage, repository } = {}) {
+export async function createApp(config, { extraRouters = [], storage, repository } = {}) {
   const app = express();
 
   applySecurity(app, config);
-  app.use(sessionMiddleware(config));
+  app.use(await sessionMiddleware(config));
   const { passport, enabled } = createPassport(config);
   app.use(passport.initialize());
   app.use(passport.session());

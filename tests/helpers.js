@@ -16,7 +16,7 @@ export function makeTestConfig(overrides = {}) {
   });
 }
 
-export function makeTestApp(overrides = {}, options = {}) {
+export async function makeTestApp(overrides = {}, options = {}) {
   return createApp(makeTestConfig(overrides), options);
 }
 

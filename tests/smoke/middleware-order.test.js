@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+﻿import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Router } from 'express';
 import express from 'express';
@@ -18,7 +18,7 @@ function appWithThrowingRoute(config) {
 }
 
 test('unknown route returns errors.js JSON contract, not the Express default HTML 404', async () => {
-  const res = await request(makeTestApp()).get('/definitely/not/a/route');
+  const res = await request(await makeTestApp()).get('/definitely/not/a/route');
   assert.equal(res.status, 404);
   assert.match(res.headers['content-type'], /^application\/json/);
   assert.equal(res.body.error.code, 'NOT_FOUND');
