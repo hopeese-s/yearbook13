@@ -7,6 +7,7 @@ import { createStorage } from './src/storage/index.js';
 import { createRepository } from './src/data/index.js';
 import { logger } from './src/util/logger.js';
 
+process.env.NODE_ENV ||= 'development';
 const config = loadEnv();
 const storage = await createStorage(config);
 const repository = await createRepository(config);
