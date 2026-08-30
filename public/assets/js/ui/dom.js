@@ -1,7 +1,10 @@
 /** Tiny DOM helpers shared by all frontend modules. */
 
-export function el(tag, props = {}, children = []) {
+// Variadic children: el('div', {}, child1, child2) AND el('div', {}, [child1, child2])
+// both work — components call it both ways.
+export function el(tag, props = {}, ...childArgs) {
   const node = document.createElement(tag);
+  const children = childArgs.length === 1 && Array.isArray(childArgs[0]) ? childArgs[0] : childArgs;
   for (const [key, value] of Object.entries(props)) {
     if (key === 'class') node.className = value;
     else if (key === 'text') node.textContent = value;
