@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
-import { makeTestApp, testLoginRouter } from '../helpers.js';
+import { makeTestApp, makeTestConfig, testLoginRouter } from '../helpers.js';
 import { applyRole, mapGoogleProfile } from '../../src/auth/passport.js';
+import { resolveCallbackUrl } from '../../src/server/routes/auth.routes.js';
 
 const OAUTH_CREDS = {
   GOOGLE_CLIENT_ID: 'test-client-id',
@@ -110,6 +111,19 @@ test('unauthenticated /auth/status reports anonymous', async () => {
   assert.equal(res.status, 200);
   assert.equal(res.body.authenticated, false);
   assert.equal(res.body.user, null);
+});
+
+test('callback URL: configured value wins, request host is the fallback', () => {
+  const config = makeTestConfig({ ...OAUTH_CREDS });
+  const fakeReq = { protocol: 'https', get: (header) => (header === 'host' ? 'ims13.up.railway.app' : undefined) };
+
+  assert.equal(resolveCallbackUrl(config, fakeReq), 'http://localhost:3000/auth/google/callback');
+
+  const noCallbackConfig = makeTestConfig({
+    ...OAUTH_CREDS,
+    GOOGLE_CALLBACK_URL: '   ',
+  });
+  assert.equal(resolveCallbackUrl(noCallbackConfig, fakeReq), 'https://ims13.up.railway.app/auth/google/callback');
 });
 
 test('GET /auth/logout destroys session and redirects to /', async () => {

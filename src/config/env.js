@@ -92,11 +92,14 @@ export function loadEnv(source = process.env) {
   // --- Google OAuth (authentication ONLY; Drive permissions are a separate future flow) ---
   const googleClientId = source.GOOGLE_CLIENT_ID;
   const googleClientSecret = source.GOOGLE_CLIENT_SECRET;
-  const googleCallbackUrl = source.GOOGLE_CALLBACK_URL;
+  // GOOGLE_CALLBACK_URL is optional: when unset, the callback is derived from
+  // the incoming request host (see resolveCallbackUrl in auth.routes.js), so
+  // only the client id/secret plus the Google Console redirect registration
+  // are needed. Trimmed to survive stray spaces/paste artifacts.
+  const googleCallbackUrl = typeof source.GOOGLE_CALLBACK_URL === 'string' ? source.GOOGLE_CALLBACK_URL.trim() : '';
   if (isProd) {
     if (!googleClientId) failures.push('GOOGLE_CLIENT_ID is required in production');
     if (!googleClientSecret) failures.push('GOOGLE_CLIENT_SECRET is required in production');
-    if (!googleCallbackUrl) failures.push('GOOGLE_CALLBACK_URL is required in production');
   }
 
   const adminEmails = (source.ADMIN_EMAILS ?? '')

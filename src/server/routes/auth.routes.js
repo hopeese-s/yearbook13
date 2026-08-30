@@ -16,6 +16,20 @@ function safeReturnTo(value) {
   return typeof value === 'string' && value.startsWith('/') && !/^\/[\\/]/.test(value) ? value : '/';
 }
 
+/**
+ * Resolve the OAuth redirect URI for this request.
+ * Uses the explicitly configured GOOGLE_CALLBACK_URL when present; otherwise
+ * derives it from the actual request host, so deployments only need the
+ * client id/secret and the matching redirect registered in Google Console.
+ */
+export function resolveCallbackUrl(config, req) {
+  const configured = (config.auth.google.callbackUrl ?? '').trim();
+  if (configured) return configured;
+  const proto = req.protocol; // trust proxy is already configured for Railway
+  const host = req.get('host');
+  return `${proto}://${host}/auth/google/callback`;
+}
+
 export function authRoutes(config, passportInstance, oauthEnabled) {
   const router = Router();
   const limiter = createRateLimiter(config.limits.authRateLimit);
@@ -23,25 +37,33 @@ export function authRoutes(config, passportInstance, oauthEnabled) {
   router.get('/auth/google', limiter, (req, res, next) => {
     if (!oauthEnabled) return res.status(503).json(OAUTH_NOT_CONFIGURED);
     req.session.returnTo = safeReturnTo(req.query.returnTo);
-    passportInstance.authenticate('google', { scope: AUTH_SCOPES })(req, res, next);
+    passportInstance.authenticate('google', { scope: AUTH_SCOPES, callbackURL: resolveCallbackUrl(config, req) })(
+      req,
+      res,
+      next,
+    );
   });
 
   router.get('/auth/google/callback', limiter, (req, res, next) => {
     if (!oauthEnabled) return res.status(503).json(OAUTH_NOT_CONFIGURED);
-    passportInstance.authenticate('google', (err, user) => {
-      if (err) return next(err);
-      if (!user) return res.redirect('/auth/failure');
-      const returnTo = safeReturnTo(req.session?.returnTo);
-      // Session fixation mitigation: regenerate after the OAuth exchange,
-      // then re-establish the login on the fresh session.
-      req.session.regenerate((regenErr) => {
-        if (regenErr) return next(regenErr);
-        req.login(user, (loginErr) => {
-          if (loginErr) return next(loginErr);
-          res.redirect(returnTo);
+    passportInstance.authenticate(
+      'google',
+      { callbackURL: resolveCallbackUrl(config, req) },
+      (err, user) => {
+        if (err) return next(err);
+        if (!user) return res.redirect('/auth/failure');
+        const returnTo = safeReturnTo(req.session?.returnTo);
+        // Session fixation mitigation: regenerate after the OAuth exchange,
+        // then re-establish the login on the fresh session.
+        req.session.regenerate((regenErr) => {
+          if (regenErr) return next(regenErr);
+          req.login(user, (loginErr) => {
+            if (loginErr) return next(loginErr);
+            res.redirect(returnTo);
+          });
         });
-      });
-    })(req, res, next);
+      },
+    )(req, res, next);
   });
 
   router.get('/auth/failure', (_req, res) => {

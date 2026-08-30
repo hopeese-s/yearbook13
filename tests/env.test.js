@@ -101,13 +101,19 @@ test('production refuses the SESSION_SECRET placeholder from .env.example', () =
   expectConfigError({ ...prodBase, SESSION_SECRET: `changeme-${'x'.repeat(40)}` }, 'placeholder');
 });
 
-test('production refuses missing Google OAuth credentials (each variable)', () => {
+test('production refuses missing Google OAuth credentials (id/secret; callback is optional)', () => {
   const { GOOGLE_CLIENT_ID, ...noId } = prodBase;
   expectConfigError(noId, 'GOOGLE_CLIENT_ID');
   const { GOOGLE_CLIENT_SECRET, ...noSecret } = prodBase;
   expectConfigError(noSecret, 'GOOGLE_CLIENT_SECRET');
+  // GOOGLE_CALLBACK_URL is optional: derived from the request host when unset.
   const { GOOGLE_CALLBACK_URL, ...noCallback } = prodBase;
-  expectConfigError(noCallback, 'GOOGLE_CALLBACK_URL');
+  assert.equal(loadEnv(noCallback).auth.google.callbackUrl, '');
+});
+
+test('GOOGLE_CALLBACK_URL is trimmed of stray whitespace', () => {
+  const config = loadEnv({ ...prodBase, GOOGLE_CALLBACK_URL: '  https://example.com/auth/google/callback  ' });
+  assert.equal(config.auth.google.callbackUrl, 'https://example.com/auth/google/callback');
 });
 
 test('production refuses missing R2 credentials when STORAGE_DRIVER=r2', () => {
