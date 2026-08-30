@@ -44,7 +44,7 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
 
   router.get('/api/photos/export/zip', requireAdmin, async (_req, res, next) => {
     try {
-      const { items } = await repository.listPhotos({ limit: 500 });
+      const { items } = await repository.listPhotos({ limit: 9999 });
       const entries = [];
       for (const record of items) {
         try {

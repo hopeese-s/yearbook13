@@ -150,7 +150,7 @@ const metadataBindings = {
   categories: 'f-categories',
 };
 for (const [key, id] of Object.entries(metadataBindings)) {
-  document.getElementById(id).addEventListener('input', (event) => {
+  document.getElementById(id)?.addEventListener('input', (event) => {
     steps.setMetadata({ [key]: event.target.value });
   });
 }
