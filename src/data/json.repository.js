@@ -67,6 +67,7 @@ export function createJsonRepository({ file }) {
         section,
         year,
         personId,
+        search,
         sort = 'newest',
       } = query;
 
@@ -74,9 +75,22 @@ export function createJsonRepository({ file }) {
       if (collection) items = items.filter((r) => matchesLabel(r.collections, collection));
       if (tag) items = items.filter((r) => matchesLabel(r.tags, tag));
       if (category) items = items.filter((r) => matchesLabel(r.categories, category));
-      if (section) items = items.filter((r) => r.section.toLowerCase() === String(section).toLowerCase());
+      if (section) items = items.filter((r) => (r.section ?? '').toLowerCase() === String(section).toLowerCase());
       if (year !== undefined && year !== null && year !== '') items = items.filter((r) => r.year === Number(year));
       if (personId) items = items.filter((r) => matchesLabel(r.personIds, personId));
+      if (search && String(search).trim()) {
+        const term = String(search).trim().toLowerCase();
+        items = items.filter(
+          (r) =>
+            (r.caption ?? '').toLowerCase().includes(term) ||
+            (r.filename ?? '').toLowerCase().includes(term) ||
+            (r.section ?? '').toLowerCase().includes(term) ||
+            (r.collections ?? []).some((item) => item.toLowerCase().includes(term)) ||
+            (r.tags ?? []).some((item) => item.toLowerCase().includes(term)) ||
+            (r.categories ?? []).some((item) => item.toLowerCase().includes(term)) ||
+            (r.personIds ?? []).some((item) => item.toLowerCase().includes(term)),
+        );
+      }
 
       items = [...items].sort((a, b) => {
         // Tie-break on id so same-millisecond records keep a stable order.

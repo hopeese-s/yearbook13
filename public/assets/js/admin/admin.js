@@ -146,6 +146,7 @@ const metadataBindings = {
   year: 'f-year',
   collections: 'f-collections',
   tags: 'f-tags',
+  personIds: 'f-personIds',
   categories: 'f-categories',
 };
 for (const [key, id] of Object.entries(metadataBindings)) {
@@ -184,6 +185,7 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
     if (meta.year) form.append('year', meta.year);
     if (meta.collections) form.append('collections', meta.collections);
     if (meta.tags) form.append('tags', meta.tags);
+    if (meta.personIds) form.append('personIds', meta.personIds);
     if (meta.categories) form.append('categories', meta.categories);
     return form;
   };
@@ -311,6 +313,7 @@ const grid = document.getElementById('photo-grid');
 const marquee = document.getElementById('marquee');
 const selectionCount = document.getElementById('selection-count');
 const deleteBtn = document.getElementById('delete-selected');
+const bulkEditBtn = document.getElementById('bulk-edit-btn');
 const manageState = document.getElementById('manage-state');
 let photos = [];
 const selected = new Set();
@@ -318,6 +321,7 @@ const selected = new Set();
 function renderSelection() {
   selectionCount.textContent = `${selected.size} selected`;
   deleteBtn.disabled = selected.size === 0;
+  if (bulkEditBtn) bulkEditBtn.disabled = selected.size === 0;
   for (const node of grid.querySelectorAll('.grid-item')) {
     node.classList.toggle('selected', selected.has(node.dataset.id));
   }
@@ -431,6 +435,42 @@ deleteBtn.addEventListener('click', async () => {
   await loadPhotos();
   if (failures > 0) window.alert(`${failures} photo(s) could not be deleted. Try again.`);
 });
+
+if (bulkEditBtn) {
+  bulkEditBtn.addEventListener('click', async () => {
+    if (selected.size === 0) return;
+    const collectionsInput = window.prompt(`Bulk update ${selected.size} photo(s).\nEnter Collections (comma-separated, or leave blank to keep unchanged):`);
+    if (collectionsInput === null) return;
+    const tagsInput = window.prompt('Enter Tags (comma-separated, or leave blank to keep unchanged):');
+    if (tagsInput === null) return;
+    const personInput = window.prompt('Enter Tagged Friends (comma-separated, or leave blank to keep unchanged):');
+    if (personInput === null) return;
+
+    const patch = {};
+    if (collectionsInput.trim()) patch.collections = collectionsInput.split(',').map((s) => s.trim()).filter(Boolean);
+    if (tagsInput.trim()) patch.tags = tagsInput.split(',').map((s) => s.trim()).filter(Boolean);
+    if (personInput.trim()) patch.personIds = personInput.split(',').map((s) => s.trim()).filter(Boolean);
+
+    if (Object.keys(patch).length === 0) return;
+
+    try {
+      const res = await fetch('/api/photos/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [...selected], patch }),
+      });
+      if (res.ok) {
+        window.alert('Bulk update completed successfully!');
+        await loadPhotos();
+      } else {
+        const body = await res.json().catch(() => null);
+        window.alert(`Bulk update failed: ${body?.error?.message ?? res.status}`);
+      }
+    } catch {
+      window.alert('Network error during bulk update.');
+    }
+  });
+}
 
 async function loadPhotos() {
   renderState(manageState, { kind: 'loading', detail: 'Loading photos…' });

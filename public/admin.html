@@ -72,6 +72,8 @@
                 <input id="f-collections" type="text" placeholder="sports-day, field-trip"></div>
               <div class="field"><label for="f-tags">Tags <span class="muted">(comma-separated)</span></label>
                 <input id="f-tags" type="text" placeholder="fun, friends"></div>
+              <div class="field"><label for="f-personIds">Tagged Friends <span class="muted">(comma-separated)</span></label>
+                <input id="f-personIds" type="text" placeholder="alex, sarah, john"></div>
               <div class="field"><label for="f-categories">Categories <span class="muted">(comma-separated)</span></label>
                 <input id="f-categories" type="text" placeholder="events"></div>
             </div>
@@ -121,6 +123,7 @@
             <div class="toolbar glass" style="margin-bottom:14px">
               <span class="muted" id="selection-count">0 selected</span>
               <div class="spacer"></div>
+              <button class="btn" id="bulk-edit-btn" type="button" disabled>Bulk Edit</button>
               <button class="btn" id="select-all" type="button">Select all</button>
               <button class="btn danger" id="delete-selected" type="button" disabled>Delete selected</button>
             </div>
@@ -137,6 +140,9 @@
               Uploads run through the image pipeline (orientation fix, EXIF stripped, thumbnail generated)
               before landing in storage. Signed in as <strong id="whoami">…</strong>
             </p>
+            <div style="margin-top:14px">
+              <a class="btn" id="export-zip-btn" href="/api/photos/export/zip" download>Export ZIP Backup</a>
+            </div>
           </section>
         </div>
       </div>

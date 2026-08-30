@@ -42,11 +42,56 @@ function openQuickView(photo) {
   lightbox.open(photo);
 }
 
+let searchQuery = '';
+let activePerson = '';
+let activeTag = '';
+
+// Read URL parameters (e.g. ?collection=graduation or ?person=alex)
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('collection')) activeCollection = urlParams.get('collection');
+if (urlParams.has('person')) activePerson = urlParams.get('person');
+if (urlParams.has('tag')) activeTag = urlParams.get('tag');
+if (urlParams.has('search')) searchQuery = urlParams.get('search');
+
+const searchInput = document.getElementById('gallery-search');
+if (searchInput) {
+  if (searchQuery) searchInput.value = searchQuery;
+  let debounceTimer;
+  searchInput.addEventListener('input', (event) => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      searchQuery = event.target.value.trim().toLowerCase();
+      renderGallery();
+    }, 200);
+  });
+}
+
 function renderGallery() {
   hide(statePanel);
-  const photos = activeCollection
-    ? allPhotos.filter((photo) => photo.collections?.some((c) => c.toLowerCase() === activeCollection.toLowerCase()))
-    : allPhotos;
+  let photos = allPhotos;
+
+  if (activeCollection) {
+    photos = photos.filter((p) => p.collections?.some((c) => c.toLowerCase() === activeCollection.toLowerCase()));
+  }
+  if (activePerson) {
+    photos = photos.filter((p) => p.personIds?.some((person) => person.toLowerCase() === activePerson.toLowerCase()));
+  }
+  if (activeTag) {
+    photos = photos.filter((p) => p.tags?.some((t) => t.toLowerCase() === activeTag.toLowerCase()));
+  }
+  if (searchQuery) {
+    photos = photos.filter(
+      (p) =>
+        (p.caption ?? '').toLowerCase().includes(searchQuery) ||
+        (p.filename ?? '').toLowerCase().includes(searchQuery) ||
+        (p.section ?? '').toLowerCase().includes(searchQuery) ||
+        (p.collections ?? []).some((item) => item.toLowerCase().includes(searchQuery)) ||
+        (p.tags ?? []).some((item) => item.toLowerCase().includes(searchQuery)) ||
+        (p.categories ?? []).some((item) => item.toLowerCase().includes(searchQuery)) ||
+        (p.personIds ?? []).some((item) => item.toLowerCase().includes(searchQuery)),
+    );
+  }
+
   const countLabel = photos.length === 1 ? 'photograph' : 'photographs';
   wallCount.textContent =
     photos.length === galleryTotal ? `${galleryTotal} ${countLabel}` : `${photos.length} shown · ${galleryTotal} total`;
@@ -57,8 +102,8 @@ function renderGallery() {
       masonryRoot.hidden = false;
       renderState(statePanel, {
         kind: 'empty',
-        title: 'No photos in this collection',
-        detail: 'Choose another collection to return to the wall.',
+        title: 'No matching photos',
+        detail: 'Try clearing your search or filters.',
       });
       return;
     }
@@ -90,7 +135,7 @@ carouselNav.addEventListener('click', (event) => {
 
 async function boot() {
   try {
-    const result = await getPhotos({ limit: 120 });
+    const result = await getPhotos({ limit: 200 });
     allPhotos = result.items ?? [];
     galleryTotal = Number(result.total ?? allPhotos.length);
     preview.replacePhotos?.(allPhotos);
@@ -113,9 +158,16 @@ async function boot() {
       },
     });
 
+    if (activeCollection) chips.setActive(activeCollection);
+
     // Hero: silent failure — the copy still works without 3D.
     initHero(heroMount, allPhotos).catch(() => {});
     renderGallery();
+
+    // Register Service Worker for PWA support
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
   } catch (err) {
     renderState(statePanel, { kind: 'error', detail: err.message });
   }

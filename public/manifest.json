@@ -1,0 +1,18 @@
+{
+  "short_name": "IMS13",
+  "name": "IMS13 Yearbook",
+  "description": "Dark Liquid Glass photo gallery and archive for class IMS13",
+  "icons": [
+    {
+      "src": "/assets/css/tokens.css",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0a0c14",
+  "theme_color": "#0a0c14",
+  "display": "standalone",
+  "orientation": "any"
+}

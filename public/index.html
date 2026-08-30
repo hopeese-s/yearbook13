@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
-  <meta name="theme-color" content="#f5f5f7">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0a0c14">
   <title>IMS13 Yearbook</title>
+  <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="/assets/css/tokens.css">
   <link rel="stylesheet" href="/assets/css/base.css">
   <link rel="stylesheet" href="/assets/css/glass.css">
@@ -47,6 +48,9 @@
         <p class="wall-count" id="wall-count">— photographs</p>
       </div>
       <div class="toolbar glass wall-toolbar">
+        <div class="search-box">
+          <input id="gallery-search" type="search" placeholder="Search caption, tags, people…" aria-label="Search photos">
+        </div>
         <div class="chips" id="collection-chips" role="toolbar" aria-label="Filter by collection"></div>
         <div class="spacer"></div>
         <button class="btn view-toggle" id="view-carousel" type="button"><span class="view-glyph" aria-hidden="true"></span> <span id="view-label">Carousel</span></button>

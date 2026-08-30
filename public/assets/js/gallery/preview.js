@@ -17,6 +17,8 @@ export class PhotoPreview {
   #stage;
   #filmstrip;
 
+  #slideshowTimer = null;
+
   constructor(photos) {
     this.#photos = photos;
     this.#window = createMacWindow({ title: 'Preview', onClose: () => this.#onClose() });
@@ -31,6 +33,7 @@ export class PhotoPreview {
       this.#tool('−', 'Zoom out', () => this.setZoom(this.#state.zoom - 0.5)),
       this.#tool('+', 'Zoom in', () => this.setZoom(this.#state.zoom + 0.5)),
       this.#tool('⟳', 'Rotate 90°', () => this.rotate()),
+      this.#tool('▶', 'Play slideshow', () => this.toggleSlideshow(), 'slideshow-btn'),
       this.#tool('⟲', 'Reset view', () => this.reset()),
       this.#tool('›', 'Next photo', () => this.next()),
     );
@@ -38,8 +41,21 @@ export class PhotoPreview {
     this.#window.body.append(this.#stage, toolbar, this.#filmstrip);
   }
 
-  #tool(label, ariaLabel, onClick) {
-    return el('button', { class: 'tool-btn', type: 'button', 'aria-label': ariaLabel, text: label, onclick: onClick });
+  #tool(label, ariaLabel, onClick, extraClass = '') {
+    return el('button', { class: `tool-btn ${extraClass}`.trim(), type: 'button', 'aria-label': ariaLabel, text: label, onclick: onClick });
+  }
+
+  toggleSlideshow() {
+    if (this.#slideshowTimer) {
+      clearInterval(this.#slideshowTimer);
+      this.#slideshowTimer = null;
+      const btn = this.#window.body.querySelector('.slideshow-btn');
+      if (btn) btn.textContent = '▶';
+    } else {
+      this.#slideshowTimer = setInterval(() => this.next(), 3500);
+      const btn = this.#window.body.querySelector('.slideshow-btn');
+      if (btn) btn.textContent = '⏸';
+    }
   }
 
   open(index = 0) {
@@ -54,6 +70,10 @@ export class PhotoPreview {
   }
 
   #onClose() {
+    if (this.#slideshowTimer) {
+      clearInterval(this.#slideshowTimer);
+      this.#slideshowTimer = null;
+    }
     this.#state.open = false;
   }
 

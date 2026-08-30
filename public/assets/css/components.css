@@ -45,6 +45,42 @@
   font-weight: 600;
 }
 
+/* Wall toolbar & Liquid Glass Search Box */
+.wall-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  margin-bottom: 24px;
+  border-radius: var(--r-md);
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  min-width: 180px;
+  max-width: 280px;
+  flex: 1;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--ink-hi);
+  font-size: 0.86rem;
+  outline: none;
+  transition: border-color var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
+}
+
+.search-box input:focus {
+  border-color: rgba(var(--accent-rgb), 0.6);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.25);
+  background: rgba(255, 255, 255, 0.09);
+}
+
 /* Dock-style nav (skeuomorphic hint of the macOS dock). */
 .dock {
   display: flex;

@@ -2,14 +2,17 @@ import { Router } from 'express';
 import { requireAdmin } from '../middleware/auth.js';
 import { createRateLimiter } from '../middleware/rateLimit.js';
 import { applyPhotoPatch } from '../../domain/photos.js';
+import { buildZip } from '../../util/zip.js';
 
 /**
- * Photo API (Phase 4).
- *   GET    /api/photos            public list (filters + pagination)
+ * Photo API (Phase 4 + Phase 2 enhancements).
+ *   GET    /api/photos            public list (filters + pagination + search)
  *   GET    /api/photos/:id        public single record
  *   GET    /api/photos/:id/file   public original bytes (served from storage)
  *   GET    /api/photos/:id/thumb  public thumbnail bytes
+ *   GET    /api/photos/export/zip admin backup ZIP download
  *   POST   /api/photos            admin upload (multipart, rate limited)
+ *   POST   /api/photos/bulk       admin bulk metadata patch
  *   PATCH  /api/photos/:id        admin metadata edit
  *   DELETE /api/photos/:id        admin delete (record + stored objects)
  */
@@ -33,9 +36,61 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
     section: query.section,
     year: query.year,
     personId: query.personId,
+    search: query.search,
     sort: query.sort === 'oldest' ? 'oldest' : 'newest',
     limit: query.limit,
     offset: query.offset,
+  });
+
+  router.get('/api/photos/export/zip', requireAdmin, async (_req, res, next) => {
+    try {
+      const { items } = await repository.listPhotos({ limit: 500 });
+      const entries = [];
+      for (const record of items) {
+        try {
+          const bytes = await storage.read(record.storageKey);
+          const ext = record.filename?.includes('.') ? '' : '.jpg';
+          const name = `photos/${record.id}_${record.filename || 'photo'}${ext}`;
+          entries.push({ name, data: bytes });
+        } catch {
+          // ignore missing storage keys
+        }
+      }
+      const zipBuffer = buildZip(entries);
+      res.set('Content-Type', 'application/zip');
+      res.set('Content-Disposition', 'attachment; filename="ims13-yearbook-backup.zip"');
+      res.send(zipBuffer);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/api/photos/bulk', requireAdmin, async (req, res, next) => {
+    try {
+      const { ids = [], patch = {} } = req.body ?? {};
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: { code: 'INVALID_REQUEST', message: 'Attach an array of photo ids' } });
+      }
+      const updated = [];
+      const failed = [];
+      for (const id of ids) {
+        const record = await repository.getPhoto(id);
+        if (!record) {
+          failed.push({ id, message: 'Photo not found' });
+          continue;
+        }
+        const { value, errors } = applyPhotoPatch(record, patch);
+        if (errors.length > 0) {
+          failed.push({ id, message: errors.join('; ') });
+          continue;
+        }
+        const saved = await repository.updatePhoto(id, value);
+        if (saved) updated.push(withUrls(saved));
+      }
+      res.json({ updated, failed });
+    } catch (err) {
+      next(err);
+    }
   });
 
   router.get('/api/photos', async (req, res, next) => {
@@ -116,6 +171,7 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
               collections: req.body.collections ? String(req.body.collections).split(',') : undefined,
               tags: req.body.tags ? String(req.body.tags).split(',') : undefined,
               categories: req.body.categories ? String(req.body.categories).split(',') : undefined,
+              personIds: req.body.personIds ? String(req.body.personIds).split(',') : undefined,
             },
           });
           results.uploaded.push(withUrls(record));
