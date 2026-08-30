@@ -20,7 +20,10 @@ function deviceTier() {
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const weakDevice = (navigator.hardwareConcurrency ?? 8) <= 4;
   const canvas = document.createElement('canvas');
-  const hasWebGL = Boolean(canvas.getContext('webgl2') ?? canvas.getContext('webgl'));
+  const context = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
+  const hasWebGL = Boolean(context);
+  // Release the probe context so it does not linger for the page lifetime.
+  context?.getExtension('WEBGL_lose_context')?.loseContext();
   const mobile = window.matchMedia('(max-width: 720px)').matches;
   return { reducedMotion, weakDevice, hasWebGL, mobile };
 }
@@ -49,7 +52,7 @@ export async function initHero(mount, photos) {
   const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 60);
   camera.position.set(0, 0, 7.2);
 
-  studioEnvironment(renderer, scene);
+  const envTexture = studioEnvironment(renderer, scene);
 
   // Lights: one soft key + rim for the glass edges.
   const key = new THREE.DirectionalLight(0xffffff, 1.1);
@@ -127,6 +130,8 @@ export async function initHero(mount, photos) {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
+    // Reduced-motion renders a single static frame; keep it fresh on resize.
+    if (tier.reducedMotion) renderer.render(scene, camera);
   };
   window.addEventListener('resize', onResize, { passive: true });
 
@@ -189,6 +194,8 @@ export async function initHero(mount, photos) {
         });
       }
       renderer.dispose();
+      envTexture.dispose();
+      scene.environment = null;
       renderer.domElement.remove();
     },
   };

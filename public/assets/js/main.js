@@ -81,9 +81,10 @@ async function boot() {
     }
 
     const collections = [...new Set(allPhotos.flatMap((photo) => photo.collections ?? []))];
-    initChips(chipsRoot, collections, {
+    const chips = initChips(chipsRoot, collections, {
       onSelect: (value) => {
         activeCollection = value;
+        chips.setActive(value);
         renderGallery();
       },
     });

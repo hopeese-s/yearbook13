@@ -1,4 +1,4 @@
-import { renderState } from '../ui/dom.js';
+import { el, renderState } from '../ui/dom.js';
 import { initMenu } from '../ui/menu.js';
 import { initScrollspy } from './scrollspy.js';
 import { createUploadSteps, computeInsertIndex, selectInRect } from './steps.js';
@@ -13,7 +13,6 @@ const whoami = document.getElementById('whoami');
 
 /* ---------- Upload wizard ---------- */
 const steps = createUploadSteps();
-const files = []; // keep File objects for the POST
 const stepPanes = [...document.querySelectorAll('.step-pane')].sort((a, b) => Number(a.dataset.step) - Number(b.dataset.step));
 const nextBtn = document.getElementById('next-btn');
 const backBtn = document.getElementById('back-btn');
@@ -38,14 +37,13 @@ function renderStepsBar(snapshot) {
 
 function renderBatchStrip(snapshot) {
   const strip = document.getElementById('batch-strip');
-  const caret = document.getElementById('insertion-caret');
   const hint = document.getElementById('batch-hint');
   for (const node of [...strip.querySelectorAll('.batch-item')]) node.remove();
 
   snapshot.files.forEach((file, index) => {
     const item = el(
       'div',
-      { class: 'batch-item', draggable: 'false', 'data-index': String(index), title: file.name },
+      { class: 'batch-item', 'data-index': String(index), title: file.name },
       el('img', { src: file.url, alt: file.name }),
       el('span', { class: 'batch-name', text: file.name }),
     );
@@ -53,24 +51,28 @@ function renderBatchStrip(snapshot) {
   });
 
   hint.hidden = snapshot.files.length < 2;
-  caret.className = 'insertion-caret';
+}
 
-  // Drag-to-reorder with insertion caret feedback.
+// Drag-to-reorder with insertion caret feedback. Strip-level listeners are
+// registered ONCE (delegation) — rebuilds must not stack handlers.
+{
+  const strip = document.getElementById('batch-strip');
+  const caret = document.getElementById('insertion-caret');
   let dragIndex = null;
-  for (const item of strip.querySelectorAll('.batch-item')) {
-    item.addEventListener('pointerdown', () => {
-      dragIndex = Number(item.dataset.index);
-      item.classList.add('dragging');
-      caret.classList.add('visible');
-    });
-  }
+
+  strip.addEventListener('pointerdown', (event) => {
+    const item = event.target.closest('.batch-item');
+    if (!item) return;
+    dragIndex = Number(item.dataset.index);
+    item.classList.add('dragging');
+    caret.classList.add('visible');
+    strip.setPointerCapture(event.pointerId);
+  });
   strip.addEventListener('pointermove', (event) => {
     if (dragIndex === null) return;
-    const rects = [...strip.querySelectorAll('.batch-item')]
-      .filter((node) => Number(node.dataset.index) !== dragIndex)
-      .map((node) => node.getBoundingClientRect());
+    const nodes = [...strip.querySelectorAll('.batch-item')].filter((node) => Number(node.dataset.index) !== dragIndex);
+    const rects = nodes.map((node) => node.getBoundingClientRect());
     const insertAt = computeInsertIndex(rects, event.clientX);
-    const nodes = [...strip.querySelectorAll('.batch-item')];
     const anchor = nodes[insertAt] ?? null;
     const stripRect = strip.getBoundingClientRect();
     caret.style.left = `${(anchor ? anchor.getBoundingClientRect().left : stripRect.right - 14) - stripRect.left}px`;
@@ -85,7 +87,7 @@ function renderBatchStrip(snapshot) {
     caret.classList.remove('visible');
   };
   strip.addEventListener('pointerup', finishDrag);
-  strip.addEventListener('pointerleave', finishDrag);
+  strip.addEventListener('pointercancel', finishDrag);
 }
 
 function renderStepPanes(snapshot) {
@@ -110,15 +112,18 @@ steps.subscribe((snapshot) => {
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('file-input');
 function addFiles(fileList) {
-  for (const file of steps.addFiles([...fileList])) {
-    files.push(file);
-    file.url = URL.createObjectURL(file);
+  // Object URL is created BEFORE the state emit so the first render has a src.
+  for (const file of [...fileList]) {
+    const url = URL.createObjectURL(file);
+    const accepted = steps.addFiles([file]);
+    if (accepted.length === 0) {
+      URL.revokeObjectURL(url);
+      continue;
+    }
+    file.url = url;
   }
 }
 dropzone.addEventListener('click', () => fileInput.click());
-dropzone.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter' || event.key === ' ') fileInput.click();
-});
 dropzone.addEventListener('dragover', (event) => {
   event.preventDefault();
   dropzone.classList.add('dragover');
@@ -194,7 +199,10 @@ document.getElementById('upload-btn').addEventListener('click', () => {
       for (const failure of body.failed ?? []) {
         results.append(el('li', { class: 'fail', text: `✗ ${failure.filename}: ${failure.message}` }));
       }
+      // Release object URLs and reset the wizard + visible form fields.
+      for (const file of snapshot.files) URL.revokeObjectURL(file.url);
       steps.clearFiles();
+      for (const id of Object.values(metadataBindings)) document.getElementById(id).value = '';
       steps.setMetadata({});
       loadPhotos();
     } else {
@@ -315,18 +323,23 @@ document.getElementById('select-all').addEventListener('click', () => {
 
 deleteBtn.addEventListener('click', async () => {
   if (selected.size === 0) return;
-  const count = selected.size;
-  if (!window.confirm(`Delete ${count} photo(s)? This cannot be undone.`)) return;
+  if (!window.confirm(`Delete ${selected.size} photo(s)? This cannot be undone.`)) return;
   deleteBtn.disabled = true;
+  let failures = 0;
   for (const id of [...selected]) {
     try {
-      await fetch(`/api/photos/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const res = await fetch(`/api/photos/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) {
+        failures += 1;
+        continue; // keep selected so the user can retry
+      }
       selected.delete(id);
     } catch {
-      // keep the id selected; the next delete attempt can retry
+      failures += 1;
     }
   }
   await loadPhotos();
+  if (failures > 0) window.alert(`${failures} photo(s) could not be deleted. Try again.`);
 });
 
 async function loadPhotos() {

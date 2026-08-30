@@ -11,7 +11,12 @@ export function createCarousel(root, photos, { onOpen } = {}) {
   const cards = photos.map((photo, photoIndex) => {
     const card = el(
       'figure',
-      { class: 'photo-card', 'aria-label': photo.caption || 'Photo' },
+      {
+        class: 'photo-card',
+        tabindex: '0',
+        role: 'button',
+        'aria-label': photo.caption || 'Photo',
+      },
       el('img', { src: photo.thumbUrl, alt: photo.caption || 'Yearbook photo', loading: 'lazy' }),
     );
     card.addEventListener('click', () => {
@@ -19,6 +24,16 @@ export function createCarousel(root, photos, { onOpen } = {}) {
       else {
         index = photoIndex;
         render();
+      }
+    });
+    card.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        if (photoIndex === index) onOpen?.(photo);
+        else {
+          index = photoIndex;
+          render();
+        }
       }
     });
     track.append(card);

@@ -1,9 +1,17 @@
 import { el } from '../ui/dom.js';
 
-/** Masonry (Pinterest-style) grid using stored aspect ratios. */
+/** Masonry (Pinterest-style) grid. Spans come from STORED dimensions when
+ * available (no lazy-load reflow); the load handler is only a fallback. */
 export function renderMasonry(container, photos, { onOpen, onQuickView } = {}) {
   container.hidden = false;
   container.replaceChildren();
+
+  const setSpan = (card, width, height) => {
+    if (!width || !height) return;
+    const rendered = card.querySelector('img').clientWidth || 230;
+    const boxHeight = (rendered * height) / width;
+    card.style.setProperty('--span', String(Math.max(6, Math.ceil((boxHeight + 14) / 8))));
+  };
 
   for (const photo of photos) {
     const img = el('img', {
@@ -13,9 +21,10 @@ export function renderMasonry(container, photos, { onOpen, onQuickView } = {}) {
       decoding: 'async',
     });
     img.addEventListener('load', () => {
-      // Grid rows are 8px; span = height + row-gap, floored to keep rhythm.
-      const height = img.naturalHeight > 0 ? (img.clientWidth * img.naturalHeight) / img.naturalWidth : 200;
-      img.closest('.photo-card')?.style.setProperty('--span', String(Math.max(6, Math.ceil((height + 14) / 8))));
+      // Fallback when the record lacks stored dimensions.
+      if (photo.width && photo.height) return;
+      const card = img.closest('.photo-card');
+      if (card) setSpan(card, img.naturalWidth, img.naturalHeight);
     });
 
     const card = el(
@@ -24,6 +33,8 @@ export function renderMasonry(container, photos, { onOpen, onQuickView } = {}) {
       img,
       photo.caption ? el('figcaption', { text: photo.caption }) : null,
     );
+    // Stored server-side dimensions -> immediate span, no reflow cascade.
+    requestAnimationFrame(() => setSpan(card, photo.width, photo.height));
     card.addEventListener('click', () => onOpen?.(photo));
     card.addEventListener('dblclick', () => onQuickView?.(photo));
     card.addEventListener('keydown', (event) => {

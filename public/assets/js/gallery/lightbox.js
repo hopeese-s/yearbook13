@@ -1,11 +1,22 @@
-import { el, clear } from '../ui/dom.js';
+import { el } from '../ui/dom.js';
 
 /**
  * Lightbox: fullscreen dark-glass quick view. Distinct from the Mac Preview
  * window — one tap to zoom a single photo, Escape/click anywhere to dismiss.
+ * Escape and click share the same close semantics (owner's onClose runs).
  */
 export function createLightbox() {
   let overlay = null;
+  let onKeydown = null;
+
+  function close() {
+    if (!overlay) return;
+    if (onKeydown) document.removeEventListener('keydown', onKeydown);
+    overlay.remove();
+    overlay = null;
+    onKeydown = null;
+    document.body.style.overflow = '';
+  }
 
   function open(photo, { onClose } = {}) {
     close();
@@ -35,21 +46,12 @@ export function createLightbox() {
       onClose?.();
     };
     overlay.addEventListener('click', dismiss);
+    onKeydown = (event) => {
+      if (event.key === 'Escape') dismiss();
+    };
+    document.addEventListener('keydown', onKeydown);
     document.body.append(overlay);
     document.body.style.overflow = 'hidden';
-    overlay.dataset.open = 'true';
-    document.addEventListener('keydown', onKeydown);
-  }
-
-  function onKeydown(event) {
-    if (event.key === 'Escape') close();
-  }
-
-  function close() {
-    if (!overlay) return;
-    overlay.remove();
-    overlay = null;
-    document.body.style.overflow = '';
   }
 
   const isOpen = () => Boolean(overlay);
@@ -60,5 +62,3 @@ export function createLightbox() {
 const style = document.createElement('style');
 style.textContent = '@keyframes lbIn { from { opacity: 0 } to { opacity: 1 } }';
 document.head.append(style);
-
-export { clear };
