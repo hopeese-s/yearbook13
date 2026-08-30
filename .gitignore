@@ -6,10 +6,10 @@
 # Dependencies
 node_modules/
 
-# Local user data (never committed)
-uploads/
-data/
-sessions/
+# Local user data (never committed - root level only)
+/uploads/
+/data/
+/sessions/
 
 # Logs and temp
 *.log
