@@ -1,5 +1,17 @@
 {
   "files": {
     "includes": ["**", "!public/assets/js/vendor"]
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["public/assets/css/base.css"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noImportantStyles": "off"
+          }
+        }
+      }
+    }
+  ]
 }

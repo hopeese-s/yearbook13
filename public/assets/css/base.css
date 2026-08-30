@@ -121,7 +121,7 @@ main {
   }
 }
 
-/* biome-ignore lint/complexity/noImportantStyles: the reduced-motion override must win the cascade */
+/* !important here is intentional: the reduced-motion override must win the cascade. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
