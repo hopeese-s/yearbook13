@@ -25,19 +25,25 @@ export function createErrorHandler(config) {
       return;
     }
     const status = Number.isInteger(err?.status) ? err.status : 500;
-    // Multer errors carry codes but no status; map them to real HTTP codes.
-    const multerStatus = {
+    // Multer limit errors carry codes but no status; map them to real HTTP
+    // statuses AND meaningful body codes (instead of generic REQUEST_ERROR).
+    const MULTIPART_LIMIT_STATUS = {
       LIMIT_FILE_SIZE: 413,
       LIMIT_FILE_COUNT: 413,
+      LIMIT_FIELD_VALUE: 400,
+      LIMIT_FIELD_COUNT: 400,
       LIMIT_UNEXPECTED_FILE: 400,
-    }[err?.code];
-    const resolvedStatus = Number.isInteger(multerStatus) ? multerStatus : status;
-    const code =
-      typeof err?.code === 'string' && err.code && !multerStatus
-        ? err.code
-        : resolvedStatus >= 500
-          ? 'INTERNAL_ERROR'
-          : 'REQUEST_ERROR';
+      LIMIT_PART_COUNT: 400,
+    };
+    const isMultipartLimit = typeof err?.code === 'string' && err.code.startsWith('LIMIT_');
+    const resolvedStatus = MULTIPART_LIMIT_STATUS[err?.code] ?? (isMultipartLimit ? 400 : status);
+    const namedCode =
+      err?.code === 'LIMIT_FILE_SIZE' || err?.code === 'LIMIT_FILE_COUNT' ? 'PAYLOAD_TOO_LARGE' : undefined;
+    const code = namedCode ?? (typeof err?.code === 'string' && err.code && !isMultipartLimit
+      ? err.code
+      : resolvedStatus >= 500
+        ? 'INTERNAL_ERROR'
+        : 'REQUEST_ERROR');
     // In production, log ONLY the safe summary: messages can embed secrets
     // (signed URLs, connection strings). Non-production adds the stack.
     const summary = `${resolvedStatus} ${code} ${req.method} ${req.originalUrl}`;

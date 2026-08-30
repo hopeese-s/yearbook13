@@ -11,7 +11,9 @@ const OAUTH_NOT_CONFIGURED = {
 };
 
 function safeReturnTo(value) {
-  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : '/';
+  // Reject protocol-relative ('//x') AND backslash forms ('/\x') which
+  // browsers normalize to '//' -> open redirect after login.
+  return typeof value === 'string' && value.startsWith('/') && !/^\/[\\/]/.test(value) ? value : '/';
 }
 
 export function authRoutes(config, passportInstance, oauthEnabled) {

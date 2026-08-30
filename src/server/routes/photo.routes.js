@@ -95,7 +95,9 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
   });
 
   // Route handler placed in its own layer so multer errors reach next(err).
-  router.post('/api/photos', async (req, res, next) => {
+  // requireAdmin repeated here as defense in depth: gating must not depend
+  // on middleware ordering in the multer layer alone.
+  router.post('/api/photos', requireAdmin, async (req, res, next) => {
     try {
       const files = Array.isArray(req.files) ? req.files : [];
       if (files.length === 0) {
