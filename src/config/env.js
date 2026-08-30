@@ -179,7 +179,9 @@ export function loadEnv(source = process.env) {
     session: Object.freeze({
       store: resolvedSessionStore,
       dir: sessionDir,
-      secret: sessionSecret,
+      // Dev/test boots without a configured secret get an explicitly-labeled
+      // fallback; production is required to set a real one above.
+      secret: sessionSecret ?? 'dev-only-not-a-real-secret-change-me',
       secureCookies: isProd,
     }),
     auth: Object.freeze({
