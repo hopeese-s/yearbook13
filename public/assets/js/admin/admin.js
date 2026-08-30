@@ -159,8 +159,9 @@ nextBtn.addEventListener('click', () => steps.next());
 backBtn.addEventListener('click', () => steps.back());
 
 // Upload with progress — files are sent in CHUNKS so large selections never
-// hit the server's per-request file cap ("Too many files").
-const UPLOAD_CHUNK_SIZE = 10;
+// hit the server's per-request file cap ("Too many files"). 5 per chunk keeps
+// peak memory bounded now that files up to 25 MB are allowed.
+const UPLOAD_CHUNK_SIZE = 5;
 
 document.getElementById('upload-btn').addEventListener('click', async () => {
   const snapshot = steps.snapshot;

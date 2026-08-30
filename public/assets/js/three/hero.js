@@ -14,6 +14,7 @@ import { roundedTexture, glassFrameMaterial, studioEnvironment } from './materia
  */
 
 const CARD_COUNT_DESKTOP = 7;
+const CARD_COUNT_MOBILE = 5;
 const CARD_COUNT_WEAK = 3;
 
 function deviceTier() {
@@ -65,7 +66,7 @@ export async function initHero(mount, photos) {
   const group = new THREE.Group();
   scene.add(group);
 
-  const count = tier.weakDevice || tier.mobile ? CARD_COUNT_WEAK : CARD_COUNT_DESKTOP;
+  const count = tier.mobile ? CARD_COUNT_MOBILE : tier.weakDevice ? CARD_COUNT_WEAK : CARD_COUNT_DESKTOP;
   const chosen = usable.slice(0, count);
   const aspectRatio = height / width;
 
@@ -74,7 +75,9 @@ export async function initHero(mount, photos) {
       try {
         const texture = await roundedTexture(photo.thumbUrl);
         const imageAspect = texture.image ? texture.image.width / texture.image.height : 4 / 3;
-        const cardWidth = 2.1;
+        // Portrait phones have a narrow horizontal frustum: use smaller cards
+        // and a tighter cluster so the whole group stays visible.
+        const cardWidth = tier.mobile ? 1.35 : 2.1;
         const cardHeight = cardWidth / imageAspect;
 
         const photoPlane = new THREE.Mesh(
@@ -92,10 +95,17 @@ export async function initHero(mount, photos) {
         card.add(frame, photoPlane);
 
         // Drifting cluster layout (seeded, deterministic composition).
+        // Portrait phones: tighter spread so every card stays in the frustum.
         const angle = (index / count) * Math.PI * 2;
-        card.position.x = Math.cos(angle) * 2.4 + (index % 2 === 0 ? 1.1 : -0.6);
-        card.position.y = (Math.sin(angle) * 1.4 + (index % 3 - 1)) * aspectRatio * 2.2;
-        card.position.z = -0.4 + (index % 4) * 0.35;
+        if (tier.mobile) {
+          card.position.x = Math.cos(angle) * 0.85 + (index % 2 === 0 ? 0.35 : -0.2);
+          card.position.y = Math.sin(angle) * 1.4 + (index % 3 - 1) * 0.85;
+          card.position.z = -0.3 + (index % 3) * 0.3;
+        } else {
+          card.position.x = Math.cos(angle) * 2.4 + (index % 2 === 0 ? 1.1 : -0.6);
+          card.position.y = (Math.sin(angle) * 1.4 + (index % 3 - 1)) * aspectRatio * 2.2;
+          card.position.z = -0.4 + (index % 4) * 0.35;
+        }
         card.rotation.set((index % 3 - 1) * 0.12, (index % 2 === 0 ? 1 : -1) * 0.28, (index % 5 - 2) * 0.1);
         card.userData = {
           baseX: card.position.x,
@@ -161,8 +171,14 @@ export async function initHero(mount, photos) {
         card.position.y = card.userData.baseY + Math.sin(t * 0.8 + card.userData.phase) * card.userData.floatAmp;
         card.rotation.z += Math.sin(t * 0.4 + card.userData.phase) * 0.0004;
       }
-      group.rotation.x += (targetTiltX - group.rotation.x) * 0.06;
-      group.rotation.y += (targetTiltY - group.rotation.y) * 0.06;
+      if (tier.mobile) {
+        // No cursor on phones: give the cluster a gentle self-sway instead.
+        group.rotation.y = Math.sin(t * 0.35) * 0.14;
+        group.rotation.x = Math.sin(t * 0.25) * 0.05;
+      } else {
+        group.rotation.x += (targetTiltX - group.rotation.x) * 0.06;
+        group.rotation.y += (targetTiltY - group.rotation.y) * 0.06;
+      }
     } else {
       // Reduced motion: render one static composed frame, then stop.
       renderer.render(scene, camera);

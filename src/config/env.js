@@ -138,8 +138,8 @@ export function loadEnv(source = process.env) {
   }
   const uploadDir = source.UPLOAD_DIR ?? 'uploads';
   const dataDir = source.DATA_DIR ?? 'data';
-  const maxUploadBytes = requireInt(source, 'MAX_UPLOAD_BYTES', failures, { min: 1024 }) ?? 10_485_760;
-  const maxUploadsPerRequest = requireInt(source, 'MAX_UPLOADS_PER_REQUEST', failures, { min: 1 }) ?? 20;
+  const maxUploadBytes = requireInt(source, 'MAX_UPLOAD_BYTES', failures, { min: 1024 }) ?? 26_214_400;
+  const maxUploadsPerRequest = requireInt(source, 'MAX_UPLOADS_PER_REQUEST', failures, { min: 1 }) ?? 60;
 
   // --- Metadata database ---
   const dbDriver = requireEnum(source, 'DB_DRIVER', DB_DRIVERS, failures);
@@ -164,7 +164,7 @@ export function loadEnv(source = process.env) {
     windowMs: requireInt(source, 'AUTH_RATE_LIMIT_WINDOW_MS', failures, { min: 1000 }) ?? 60_000,
   };
   const uploadRateLimit = {
-    max: requireInt(source, 'UPLOAD_RATE_LIMIT_MAX', failures) ?? 20,
+    max: requireInt(source, 'UPLOAD_RATE_LIMIT_MAX', failures) ?? 60,
     windowMs: requireInt(source, 'UPLOAD_RATE_LIMIT_WINDOW_MS', failures, { min: 1000 }) ?? 60_000,
   };
 

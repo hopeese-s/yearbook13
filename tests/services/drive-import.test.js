@@ -82,7 +82,7 @@ test('drive import imports every image behind a folder link (filters the rest)',
     pdf1aaaaaaaaaaaa: { meta: { id: 'pdf1aaaaaaaaaaaa', name: 'notes.pdf', mimeType: 'application/pdf', size: '10' }, bytes: Buffer.from('%PDF') },
     gdocaaaaaaaaaaaa: { meta: { id: 'gdocaaaaaaaaaaaa', name: 'Doc', mimeType: 'application/vnd.google-apps.document', size: '9' }, bytes: Buffer.alloc(0) },
     img2aaaaaaaaaaaa: { meta: { id: 'img2aaaaaaaaaaaa', name: 'trip.png', mimeType: 'image/png', size: String(png.length) }, bytes: png },
-    hugeaaaaaaaaaaaa: { meta: { id: 'hugeaaaaaaaaaaaa', name: 'huge.jpg', mimeType: 'image/jpeg', size: String(10_485_760 + 1) }, bytes: Buffer.alloc(0) },
+    hugeaaaaaaaaaaaa: { meta: { id: 'hugeaaaaaaaaaaaa', name: 'huge.jpg', mimeType: 'image/jpeg', size: String(99_999_999) }, bytes: Buffer.alloc(0) },
   });
 
   const result = await service.importFromDrive({

@@ -6,6 +6,12 @@
   box-sizing: border-box;
 }
 
+/* The hidden attribute must always win, even over display rules like
+   .masonry { display: grid } (this exact bug made the carousel show the wall). */
+[hidden] {
+  display: none !important;
+}
+
 html {
   color-scheme: light;
 }
