@@ -132,6 +132,7 @@ export function loadEnv(source = process.env) {
     if (missing.length > 0) failures.push(`STORAGE_DRIVER="r2" requires: ${missing.join(', ')}`);
   }
   const uploadDir = source.UPLOAD_DIR ?? 'uploads';
+  const dataDir = source.DATA_DIR ?? 'data';
   const maxUploadBytes = requireInt(source, 'MAX_UPLOAD_BYTES', failures, { min: 1024 }) ?? 10_485_760;
   const maxUploadsPerRequest = requireInt(source, 'MAX_UPLOADS_PER_REQUEST', failures, { min: 1 }) ?? 20;
 
@@ -193,6 +194,7 @@ export function loadEnv(source = process.env) {
     storage: Object.freeze({
       driver: resolvedStorageDriver,
       uploadDir,
+      dataDir,
       maxUploadBytes,
       maxUploadsPerRequest,
       r2: Object.freeze(r2),

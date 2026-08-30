@@ -25,15 +25,26 @@ export function createErrorHandler(config) {
       return;
     }
     const status = Number.isInteger(err?.status) ? err.status : 500;
+    // Multer errors carry codes but no status; map them to real HTTP codes.
+    const multerStatus = {
+      LIMIT_FILE_SIZE: 413,
+      LIMIT_FILE_COUNT: 413,
+      LIMIT_UNEXPECTED_FILE: 400,
+    }[err?.code];
+    const resolvedStatus = Number.isInteger(multerStatus) ? multerStatus : status;
     const code =
-      typeof err?.code === 'string' && err.code ? err.code : status >= 500 ? 'INTERNAL_ERROR' : 'REQUEST_ERROR';
+      typeof err?.code === 'string' && err.code && !multerStatus
+        ? err.code
+        : resolvedStatus >= 500
+          ? 'INTERNAL_ERROR'
+          : 'REQUEST_ERROR';
     // In production, log ONLY the safe summary: messages can embed secrets
     // (signed URLs, connection strings). Non-production adds the stack.
-    const summary = `${status} ${code} ${req.method} ${req.originalUrl}`;
+    const summary = `${resolvedStatus} ${code} ${req.method} ${req.originalUrl}`;
     if (config.isProd) logger.error(summary);
     else logger.error(summary, err?.stack ?? err?.message);
     const body = { error: { code } };
     if (!config.isProd) body.error.message = err?.message ?? 'Unexpected error';
-    res.status(status).json(body);
+    res.status(resolvedStatus).json(body);
   };
 }

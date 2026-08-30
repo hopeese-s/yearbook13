@@ -10,6 +10,8 @@ export function makeTestConfig(overrides = {}) {
     NODE_ENV: 'test',
     SESSION_SECRET: 't'.repeat(48),
     SESSION_DIR: path.join(os.tmpdir(), 'ims13-test-sessions'),
+    UPLOAD_DIR: path.join(os.tmpdir(), 'ims13-test-uploads'),
+    DATA_DIR: path.join(os.tmpdir(), `ims13-test-data-${process.pid}-${Date.now()}`),
     ...overrides,
   });
 }

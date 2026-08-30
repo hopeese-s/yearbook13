@@ -7,6 +7,6 @@ export const paths = Object.freeze({
   root: projectRoot,
   public: path.join(projectRoot, 'public'),
   uploads: (config) => path.resolve(projectRoot, config.storage.uploadDir),
-  data: path.resolve(projectRoot, 'data'),
+  data: (config) => path.resolve(projectRoot, config.storage.dataDir),
   sessions: (config) => path.resolve(projectRoot, config.session.dir),
 });
