@@ -1,6 +1,7 @@
 import { renderState, hide } from './ui/dom.js';
 import { initFocusPolicy } from './ui/focus.js';
 import { initMenu, initChips } from './ui/menu.js';
+import { initTheme } from './ui/theme.js';
 import { getPhotos, authStatus } from './api.js';
 import { renderMasonry } from './gallery/masonry.js';
 import { createCarousel } from './gallery/carousel.js';
@@ -19,9 +20,11 @@ const viewLabel = document.getElementById('view-label');
 const carouselNav = document.getElementById('carousel-nav');
 const heroMount = document.getElementById('hero-mount');
 const wallCount = document.getElementById('wall-count');
+const themeToggle = document.getElementById('theme-toggle');
 
 initFocusPolicy();
 initMenu();
+initTheme(themeToggle);
 
 let allPhotos = [];
 let galleryTotal = 0;

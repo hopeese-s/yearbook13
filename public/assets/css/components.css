@@ -116,6 +116,29 @@
   box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.35) inset;
 }
 
+.dock button.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.05rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  color: var(--ink-hi);
+  cursor: pointer;
+  box-shadow: var(--neu-out);
+  transition: all var(--t-fast) var(--ease-out);
+}
+
+.dock button.theme-toggle:hover {
+  transform: scale(1.08);
+  background: var(--accent-soft);
+  border-color: rgba(var(--accent-rgb), 0.35);
+}
+
 /* Signed-in user name display (non-admin; no link, just identity). */
 .dock-user {
   padding: 8px 16px;
@@ -322,15 +345,23 @@
   left: clamp(20px, 5vw, 56px);
   top: 50%;
   transform: translateY(-50%);
-  max-width: 480px;
+  max-width: 500px;
   pointer-events: none;
-  z-index: 2;
+  z-index: 3;
+  padding: 28px 32px;
+  border-radius: var(--r-lg);
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--neu-out);
 }
 
 .hero-copy h1 {
-  font-size: clamp(2.2rem, 6vw, 4rem);
+  font-size: clamp(2.2rem, 5.5vw, 3.6rem);
   font-weight: 800;
-  line-height: 1.02;
+  line-height: 1.06;
+  color: var(--ink-hi);
 }
 
 .hero-copy h1 .glass-word {
@@ -339,13 +370,15 @@
 
 .hero-copy p {
   color: var(--ink-mid);
-  margin: 12px 0 0;
-  font-size: 1.02rem;
+  margin: 14px 0 0;
+  font-size: 1.06rem;
+  line-height: 1.5;
+  font-weight: 480;
 }
 
 .hero-action {
   pointer-events: auto;
-  margin-top: 28px;
+  margin-top: 24px;
 }
 
 .hero-index {

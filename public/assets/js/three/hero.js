@@ -102,8 +102,8 @@ export async function initHero(mount, photos) {
           card.position.y = Math.sin(angle) * 1.4 + (index % 3 - 1) * 0.85;
           card.position.z = -0.3 + (index % 3) * 0.3;
         } else {
-          card.position.x = Math.cos(angle) * 2.4 + (index % 2 === 0 ? 1.1 : -0.6);
-          card.position.y = (Math.sin(angle) * 1.4 + (index % 3 - 1)) * aspectRatio * 2.2;
+          card.position.x = Math.cos(angle) * 1.8 + 2.0 + (index % 2 === 0 ? 0.4 : -0.3);
+          card.position.y = (Math.sin(angle) * 1.2 + (index % 3 - 1) * 0.6) * aspectRatio * 2.0;
           card.position.z = -0.4 + (index % 4) * 0.35;
         }
         card.rotation.set((index % 3 - 1) * 0.12, (index % 2 === 0 ? 1 : -1) * 0.28, (index % 5 - 2) * 0.1);

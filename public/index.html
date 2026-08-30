@@ -12,6 +12,10 @@
   <link rel="stylesheet" href="/assets/css/glass.css">
   <link rel="stylesheet" href="/assets/css/focus.css">
   <link rel="stylesheet" href="/assets/css/components.css">
+  <script>
+    const t = localStorage.getItem('ims13-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', t);
+  </script>
 </head>
 <body>
   <header class="topbar glass" id="topbar">
@@ -24,6 +28,7 @@
       <a href="#carousel-root" id="carousel-nav">Carousel</a>
       <a href="/admin.html">Curator desk</a>
       <a class="nav-signin" href="/auth/google?returnTo=/">Sign in</a>
+      <button class="btn theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme"><span aria-hidden="true">🌙</span></button>
     </nav>
   </header>
 

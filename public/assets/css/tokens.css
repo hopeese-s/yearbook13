@@ -83,3 +83,48 @@
   --ink-on-accent: #ffffff;
   --display-tracking: -0.055em;
 }
+
+[data-theme='dark'] {
+  /* --- Ground & scene --- */
+  --bg-0: #0a0c14;
+  --bg-1: #131728;
+  --bg-2: #1b2138;
+
+  /* --- Aurora washes --- */
+  --aurora-blue: rgba(10, 132, 255, 0.15);
+  --aurora-violet: rgba(94, 92, 230, 0.14);
+  --aurora-pink: rgba(255, 88, 148, 0.1);
+  --aurora-teal: rgba(64, 224, 208, 0.1);
+
+  /* --- Ink --- */
+  --ink-hi: #f5f5f7;
+  --ink-mid: #b0b0b8;
+  --ink-lo: #787880;
+
+  /* --- Accent --- */
+  --accent: #2997ff;
+  --accent-rgb: 41, 151, 255;
+  --accent-soft: rgba(41, 151, 255, 0.16);
+
+  /* --- Liquid Glass material (dark surfaces) --- */
+  --glass-fill: rgba(19, 23, 40, 0.72);
+  --glass-fill-strong: rgba(24, 29, 50, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-edge: rgba(255, 255, 255, 0.2);
+
+  /* --- Neumorphic shadow pairs (dark) --- */
+  --neu-out:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 2px 8px rgba(0, 0, 0, 0.35),
+    0 12px 36px rgba(0, 0, 0, 0.55);
+  --neu-inset:
+    0 2px 6px rgba(0, 0, 0, 0.5) inset,
+    0 -1px 0 rgba(255, 255, 255, 0.06) inset;
+
+  /* --- Skeuomorphic chrome --- */
+  --titlebar-hi: rgba(255, 255, 255, 0.1);
+  --titlebar-lo: rgba(0, 0, 0, 0.35);
+
+  --hairline: rgba(255, 255, 255, 0.12);
+}
+

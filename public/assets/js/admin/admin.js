@@ -1,11 +1,13 @@
 import { el, renderState } from '../ui/dom.js';
 import { initMenu } from '../ui/menu.js';
+import { initTheme } from '../ui/theme.js';
 import { initScrollspy } from './scrollspy.js';
 import { createUploadSteps, computeInsertIndex, selectInRect } from './steps.js';
 
 /** Admin entry: auth gate, upload wizard (steps), management (multi-select + marquee). */
 
 initMenu();
+initTheme(document.getElementById('theme-toggle'));
 
 const adminUi = document.getElementById('admin-ui');
 const authGate = document.getElementById('auth-gate');
