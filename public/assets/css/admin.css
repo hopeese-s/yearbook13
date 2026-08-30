@@ -267,6 +267,47 @@
   display: none;
 }
 
+/* --- Drive import share hint (service account email) --- */
+.share-hint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--glass-border);
+}
+
+.share-hint-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.share-hint-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-lo);
+}
+
+.share-hint-email {
+  font-size: 0.86rem;
+  font-weight: 650;
+  color: var(--ink-hi);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-hint .btn {
+  padding: 9px 14px;
+  font-size: 0.83rem;
+  flex: 0 0 auto;
+}
+
 /* --- Upload progress --- */
 .progress-track {
   height: 10px;

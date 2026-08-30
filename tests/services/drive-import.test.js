@@ -1,4 +1,4 @@
-﻿import { test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
 import request from 'supertest';
@@ -168,6 +168,18 @@ test('POST /api/drive/import rejects invalid links with 400', async () => {
   assert.equal(res.body.error.code, 'INVALID_DRIVE_LINK');
 });
 
+test('GET /api/drive/config returns mode and serviceAccountEmail to admin', async () => {
+  const app = await makeTestApp(KEY, { extraRouters: [testLoginRouter()] });
+  const agent = request.agent(app);
+  await agent.post('/test/login').expect(200);
+
+  const res = await agent.get('/api/drive/config');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.mode, 'api-key');
+  assert.equal(res.body.enabled, true);
+  assert.equal(res.body.serviceAccountEmail, '');
+});
+
 test('POST /api/drive/import end to end through the fake Drive API', async () => {
   const jpeg = await makeJpeg(30, 20);
   const app = await makeTestApp(KEY, {
@@ -186,3 +198,4 @@ test('POST /api/drive/import end to end through the fake Drive API', async () =>
   assert.equal(res.body.total, 1);
   assert.deepEqual(res.body.uploaded[0].collections, ['drive']);
 });
+

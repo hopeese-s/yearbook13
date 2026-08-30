@@ -176,9 +176,31 @@ export function loadEnv(source = process.env) {
   const driveImportEnabled = driveRaw === 'true';
 
   // --- Google Drive import (optional; separate from login OAuth) ---
-  // Drive import activates when GOOGLE_DRIVE_API_KEY is set. The pasted
-  // Drive folder/file must be shared as "Anyone with the link".
+  // Two auth modes, service account takes priority over API key:
+  //   1. GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON — the full JSON key. Lets the server
+  //      read folders shared directly to the service account's email, so
+  //      classmates can share PRIVATE folders (no public link needed).
+  //   2. GOOGLE_DRIVE_API_KEY — public ("Anyone with the link") folders only.
   const driveApiKey = typeof source.GOOGLE_DRIVE_API_KEY === 'string' ? source.GOOGLE_DRIVE_API_KEY.trim() : '';
+
+  let driveServiceAccountJson = '';
+  let driveServiceAccountEmail = '';
+  const saRaw = typeof source.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON === 'string' ? source.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON.trim() : '';
+  if (saRaw) {
+    try {
+      const parsed = JSON.parse(saRaw);
+      if (typeof parsed.client_email !== 'string' || !parsed.client_email.includes('@')) {
+        failures.push('GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON is not a valid service account key (missing client_email)');
+      } else if (typeof parsed.private_key !== 'string' || !parsed.private_key.includes('PRIVATE KEY')) {
+        failures.push('GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON is missing a valid private_key');
+      } else {
+        driveServiceAccountJson = saRaw;
+        driveServiceAccountEmail = parsed.client_email;
+      }
+    } catch {
+      failures.push('GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON must be the raw JSON key from Google Cloud (not base64, no quotes around the whole thing)');
+    }
+  }
 
   if (failures.length > 0) throw new ConfigError(failures);
 
@@ -215,7 +237,11 @@ export function loadEnv(source = process.env) {
       r2: Object.freeze(r2),
     }),
     db: Object.freeze({ driver: resolvedDbDriver, url: databaseUrl }),
-    drive: Object.freeze({ apiKey: driveApiKey }),
+    drive: Object.freeze({
+      apiKey: driveApiKey,
+      serviceAccountJson: driveServiceAccountJson,
+      serviceAccountEmail: driveServiceAccountEmail,
+    }),
     limits: Object.freeze({ jsonBodyLimit, authRateLimit, uploadRateLimit }),
   });
 }

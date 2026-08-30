@@ -7,12 +7,24 @@ import { createRateLimiter } from '../middleware/rateLimit.js';
  * POST /api/drive/import  { url, caption?, section?, year?, collections?, tags?, categories? }
  * -> { uploaded: [records], failed: [{name, message}], total }
  *
- * Enabled when GOOGLE_DRIVE_API_KEY is configured; otherwise responds 503
- * with an actionable message (same pattern as OAuth not-configured).
+ * GET  /api/drive/config (admin) -> { mode, serviceAccountEmail } so the UI
+ * can show classmates exactly which email to share folders with.
+ *
+ * Auth modes (service account first): GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON reads
+ * folders shared to the SA email (private OK); GOOGLE_DRIVE_API_KEY reads
+ * public folders only. Neither configured -> 503 with an actionable message.
  */
 export function driveRoutes({ config, driveImporter }) {
   const router = Router();
   const limiter = createRateLimiter(config.limits.uploadRateLimit);
+
+  router.get('/api/drive/config', requireAdmin, (_req, res) => {
+    res.json({
+      mode: driveImporter.mode,
+      serviceAccountEmail: driveImporter.serviceAccountEmail,
+      enabled: driveImporter.enabled,
+    });
+  });
 
   const stringOrUndefined = (value) => (typeof value === 'string' && value.trim() ? value.trim() : undefined);
 

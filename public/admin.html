@@ -92,9 +92,16 @@
           <section class="admin-panel glass" id="drive">
             <h2>Import from Google Drive</h2>
             <span class="muted">
-              Paste a Drive folder or photo link that is shared as “Anyone with the link” —
-              every photo inside is added straight to the wall (EXIF stripped, thumbnails generated).
+              Paste a Drive folder or photo link. The owner must share it — either as
+              “Anyone with the link”, or directly to the import account below.
             </span>
+            <div class="share-hint neu" id="drive-share-hint" hidden>
+              <div class="share-hint-text">
+                <span class="share-hint-label">Share folders to</span>
+                <span class="share-hint-email" id="drive-sa-email">…</span>
+              </div>
+              <button class="btn" id="copy-sa-email" type="button">Copy</button>
+            </div>
             <div class="field">
               <label for="drive-url">Drive link</label>
               <input id="drive-url" type="url" inputmode="url"

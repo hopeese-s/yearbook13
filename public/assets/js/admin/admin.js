@@ -263,8 +263,7 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
 });
 
 /* ---------- Google Drive import ---------- */
-document.getElementById('drive-import-btn').addEventListener('click', async () => {
-  const urlInput = document.getElementById('drive-url');
+document.getElementById('drive-import-btn').addEventListener('click', async () => {  const urlInput = document.getElementById('drive-url');
   const results = document.getElementById('drive-results');
   const track = document.getElementById('drive-progress');
   const fill = document.getElementById('drive-progress-fill');
@@ -461,6 +460,38 @@ if (signoutBtn) {
   });
 }
 
+/* ---------- Drive config loader ---------- */
+async function loadDriveConfig() {
+  const shareHint = document.getElementById('drive-share-hint');
+  const saEmailEl = document.getElementById('drive-sa-email');
+  const copyBtn = document.getElementById('copy-sa-email');
+  if (!shareHint || !saEmailEl || !copyBtn) return;
+
+  try {
+    const config = await fetch('/api/drive/config').then((res) => res.json());
+    if (config?.mode === 'service-account' && config.serviceAccountEmail) {
+      saEmailEl.textContent = config.serviceAccountEmail;
+      shareHint.hidden = false;
+      copyBtn.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(config.serviceAccountEmail);
+          const orig = copyBtn.textContent;
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => {
+            copyBtn.textContent = orig;
+          }, 2000);
+        } catch {
+          // fallback
+        }
+      };
+    } else {
+      shareHint.hidden = true;
+    }
+  } catch {
+    shareHint.hidden = true;
+  }
+}
+
 /* ---------- Boot: auth gate ---------- */
 async function boot() {
   try {
@@ -470,6 +501,7 @@ async function boot() {
       adminUi.hidden = false;
       initScrollspy(document.getElementById('admin-nav'), [...document.querySelectorAll('.admin-panel')]);
       loadPhotos();
+      loadDriveConfig();
     } else {
       // Server-side gate handles the redirect; this is a JS-side safety net.
       authGate.hidden = false;
@@ -480,3 +512,4 @@ async function boot() {
 }
 
 boot();
+

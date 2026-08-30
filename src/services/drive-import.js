@@ -1,9 +1,14 @@
 import { parseDriveLink } from './drive-link.js';
+import { createTokenProvider } from './drive-auth.js';
 
 /**
- * Google Drive import (separate flow from login — OAuth never gains Drive
- * scopes). Activated by GOOGLE_DRIVE_API_KEY; the pasted Drive folder/file
- * must be shared as "Anyone with the link".
+ * Google Drive import (separate flow from login — login OAuth never gains
+ * Drive scopes). Two auth modes, service account first:
+ *
+ *   1. GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON — can read folders shared directly
+ *      to the service account's email, so classmates can share PRIVATE
+ *      folders (no public link needed).
+ *   2. GOOGLE_DRIVE_API_KEY — public ("Anyone with the link") folders only.
  *
  * Every downloaded image runs through the SAME pipeline as manual uploads
  * (validation -> orientation -> EXIF strip -> thumbnail -> storage ->
@@ -27,23 +32,50 @@ export class DriveImportError extends Error {
 
 export function createDriveImportService({ config, uploadService, fetchImpl = fetch }) {
   const apiKey = (config.drive?.apiKey ?? '').trim();
-  const enabled = Boolean(apiKey);
+  let serviceAccount = null;
+  let getToken = null;
+  const saJson = (config.drive?.serviceAccountJson ?? '').trim();
+  if (saJson) {
+    try {
+      serviceAccount = JSON.parse(saJson);
+      getToken = createTokenProvider(serviceAccount, fetchImpl);
+    } catch {
+      serviceAccount = null; // env.js already validates; defensive only
+    }
+  }
+
+  const mode = serviceAccount ? 'service-account' : apiKey ? 'api-key' : 'none';
+  const enabled = mode !== 'none';
+
+  function sharingHint() {
+    if (mode === 'service-account') {
+      return `Google can't see that folder. The owner must either set sharing to "Anyone with the link" (Viewer) OR share the folder directly to ${serviceAccount.client_email} (Viewer).`;
+    }
+    return 'Google can\'t see that folder. The owner must set sharing to "Anyone with the link" (Viewer), then send the link again.';
+  }
 
   async function driveFetch(path) {
-    const separator = path.includes('?') ? '&' : '?';
+    let url = `${API_BASE}${path}`;
+    const headers = {};
+    if (mode === 'service-account') {
+      headers.Authorization = `Bearer ${await getToken()}`;
+    } else {
+      url += `${path.includes('?') ? '&' : '?'}key=${encodeURIComponent(apiKey)}`;
+    }
+
     let res;
     try {
-      res = await fetchImpl(`${API_BASE}${path}${separator}key=${encodeURIComponent(apiKey)}`);
+      res = await fetchImpl(url, { headers });
     } catch (err) {
       throw new DriveImportError('DRIVE_UNREACHABLE', 'Could not reach the Google Drive API', 502, err);
     }
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      throw new DriveImportError(
-        'DRIVE_API_ERROR',
-        body?.error?.message ?? `Google Drive API error (${res.status})`,
-        res.status === 403 || res.status === 404 ? 422 : 502,
-      );
+      const raw = body?.error?.message ?? `Google Drive API error (${res.status})`;
+      // 403/404 on Drive almost always means "the server can't see this item"
+      // — a sharing problem, not a bug. Say so plainly.
+      const message = res.status === 404 || res.status === 403 ? `${raw} — ${sharingHint()}` : raw;
+      throw new DriveImportError('DRIVE_API_ERROR', message, res.status === 403 || res.status === 404 ? 422 : 502);
     }
     return res;
   }
@@ -145,5 +177,5 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
     return { uploaded, failed, total: images.length };
   }
 
-  return { importFromDrive, enabled };
+  return { importFromDrive, enabled, mode, serviceAccountEmail: serviceAccount?.client_email ?? '' };
 }
