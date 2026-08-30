@@ -108,13 +108,15 @@ export function authRoutes(config, passportInstance, oauthEnabled) {
   });
 
   // GET /auth/google/diag — booleans ONLY (never secret values). Lets you
-  // verify from a browser whether the running server sees the OAuth env vars.
-  router.get('/auth/google/diag', (_req, res) => {
+  // verify from a browser whether the running server sees the OAuth env vars,
+  // and shows the exact redirect URI to register in Google Console.
+  router.get('/auth/google/diag', (req, res) => {
     res.json({
       clientIdSet: Boolean(config.auth.google.clientId),
       clientSecretSet: Boolean(config.auth.google.clientSecret),
       callbackUrlSet: Boolean(config.auth.google.callbackUrl),
       oauthEnabled: Boolean(config.auth.google.clientId && config.auth.google.clientSecret),
+      callbackUrlInUse: resolveCallbackUrl(config, req),
     });
   });
 

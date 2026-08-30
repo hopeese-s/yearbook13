@@ -119,12 +119,14 @@ test('GET /auth/google/diag reports booleans only, never secret values', async (
   assert.equal(unconfigured.body.clientIdSet, false);
   assert.equal(unconfigured.body.clientSecretSet, false);
   assert.equal(unconfigured.body.oauthEnabled, false);
+  assert.match(unconfigured.body.callbackUrlInUse, /\/auth\/google\/callback$/);
 
   const configured = await request(await makeTestApp(OAUTH_CREDS)).get('/auth/google/diag');
   assert.equal(configured.status, 200);
   assert.equal(configured.body.clientIdSet, true);
   assert.equal(configured.body.clientSecretSet, true);
   assert.equal(configured.body.oauthEnabled, true);
+  assert.equal(configured.body.callbackUrlInUse, 'http://localhost:3000/auth/google/callback');
   // Secrets must never leak through the diagnostic.
   assert.ok(!JSON.stringify(configured.body).includes('test-client-secret'));
 });
