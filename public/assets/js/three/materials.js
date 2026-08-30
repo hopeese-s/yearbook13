@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.js';
 
 /** Shared Three.js material/texture builders for the glass photo-card hero. */
 

@@ -357,6 +357,19 @@ async function loadPhotos() {
   }
 }
 
+/* ---------- Sign-out button ---------- */
+const signoutBtn = document.getElementById('signout');
+if (signoutBtn) {
+  signoutBtn.addEventListener('click', async () => {
+    try {
+      await fetch('/auth/logout', { method: 'POST' });
+    } catch {
+      // fall through — session may already be gone
+    }
+    window.location.href = '/';
+  });
+}
+
 /* ---------- Boot: auth gate ---------- */
 async function boot() {
   try {
@@ -367,6 +380,7 @@ async function boot() {
       initScrollspy(document.getElementById('admin-nav'), [...document.querySelectorAll('.admin-panel')]);
       loadPhotos();
     } else {
+      // Server-side gate handles the redirect; this is a JS-side safety net.
       authGate.hidden = false;
     }
   } catch {

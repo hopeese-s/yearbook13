@@ -48,10 +48,23 @@ export function authRoutes(config, passportInstance, oauthEnabled) {
     res.status(401).json({ error: { code: 'AUTH_FAILED', message: 'Google sign-in failed or was cancelled' } });
   });
 
+  // POST /auth/logout — XHR / fetch path; returns JSON {ok:true}.
   router.post('/auth/logout', (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);
       req.session.destroy(() => res.clearCookie('ims13.sid').json({ ok: true }));
+    });
+  });
+
+  // GET /auth/logout — anchor / redirect path used by the admin.html sign-out
+  // link. Destroys the session then redirects to home.
+  router.get('/auth/logout', (req, res, next) => {
+    req.logout((err) => {
+      if (err) return next(err);
+      req.session.destroy(() => {
+        res.clearCookie('ims13.sid');
+        res.redirect('/');
+      });
     });
   });
 
@@ -60,6 +73,15 @@ export function authRoutes(config, passportInstance, oauthEnabled) {
       authenticated: Boolean(req.user),
       user: req.user ? { name: req.user.name, email: req.user.email, role: req.user.role } : null,
     });
+  });
+
+  // GET /auth/me — returns the current user object or 401.
+  // Used by admin.js to identify who is signed in.
+  router.get('/auth/me', (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ error: { code: 'UNAUTHENTICATED', message: 'Not signed in' } });
+    }
+    res.json({ user: { name: req.user.name, email: req.user.email, role: req.user.role } });
   });
 
   return router;

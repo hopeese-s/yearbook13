@@ -1,0 +1,17 @@
+# Nixpacks build configuration for Railway.
+# Pins Node.js to >=20 and declares libvips so Sharp's prebuilt binary
+# resolves correctly without a source compile.
+# See: https://nixpacks.com/docs/configuration/file
+
+[phases.setup]
+nixPkgs = ["nodejs_22", "vips"]
+
+[phases.build]
+cmds = [
+  "npm install --include=dev --no-audit --no-fund",
+  "npm run build:check",
+  "npm prune --omit=dev"
+]
+
+[start]
+cmd = "npm start"

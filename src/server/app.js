@@ -43,7 +43,7 @@ export async function createApp(config, { extraRouters = [], storage, repository
   const uploadMiddleware = createUploadMiddleware(config);
 
   const routers = [
-    healthRoutes(config),
+    healthRoutes(config, { repository: resolvedRepository }),
     authRoutes(config, passport, enabled),
     photoRoutes({ config, storage: resolvedStorage, repository: resolvedRepository, uploadService, uploadMiddleware }),
     pagesRoutes(config),

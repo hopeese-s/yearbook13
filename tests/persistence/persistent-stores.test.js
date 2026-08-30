@@ -182,3 +182,15 @@ test('production session factory refuses file store even when env validation is 
   const fileConfig = { ...config, session: { ...config.session, store: 'file' } };
   await assert.rejects(() => sessionMiddleware(fileConfig), /file.*cannot be used in production/i);
 });
+
+test('session factory supports memory store in dev and refuses it in prod', async () => {
+  const { sessionMiddleware } = await import('../../src/auth/session.js');
+  const devConfig = makeTestConfig({ SESSION_STORE: 'memory' });
+  const devMiddleware = await sessionMiddleware(devConfig);
+  assert.equal(typeof devMiddleware, 'function');
+
+  const prodConfig = makeTestConfig(IS_PROD);
+  const prodMemConfig = { ...prodConfig, session: { ...prodConfig.session, store: 'memory' } };
+  await assert.rejects(() => sessionMiddleware(prodMemConfig), /memory.*cannot be used in production/i);
+});
+

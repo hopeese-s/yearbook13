@@ -80,6 +80,15 @@
   box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.4) inset;
 }
 
+/* Signed-in user name display (non-admin; no link, just identity). */
+.dock-user {
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--ink-hi);
+}
+
 /* Hamburger (mobile) */
 .menu-btn {
   display: none;

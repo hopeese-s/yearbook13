@@ -1,4 +1,4 @@
-﻿import { test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import { makeTestApp, testLoginRouter } from '../helpers.js';
@@ -111,3 +111,28 @@ test('unauthenticated /auth/status reports anonymous', async () => {
   assert.equal(res.body.authenticated, false);
   assert.equal(res.body.user, null);
 });
+
+test('GET /auth/logout destroys session and redirects to /', async () => {
+  const app = await makeTestApp({}, { extraRouters: [testLoginRouter()] });
+  const agent = request.agent(app);
+  await agent.post('/test/login').expect(200);
+  const res = await agent.get('/auth/logout');
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.location, '/');
+  const status = await agent.get('/auth/status');
+  assert.equal(status.body.authenticated, false);
+});
+
+test('GET /auth/me returns 200 with user when authenticated and 401 when anonymous', async () => {
+  const anonRes = await request(await makeTestApp()).get('/auth/me');
+  assert.equal(anonRes.status, 401);
+  assert.equal(anonRes.body.error.code, 'UNAUTHENTICATED');
+
+  const app = await makeTestApp({}, { extraRouters: [testLoginRouter()] });
+  const agent = request.agent(app);
+  await agent.post('/test/login').expect(200);
+  const authRes = await agent.get('/auth/me');
+  assert.equal(authRes.status, 200);
+  assert.equal(authRes.body.user.email, 'admin@example.com');
+});
+

@@ -124,10 +124,37 @@ async function boot() {
 // Sign-in state in the dock.
 authStatus()
   .then((status) => {
-    const signIn = document.querySelector('#dock a[href^="/auth/google"]');
-    if (status?.authenticated && signIn) {
-      signIn.textContent = status.user.role === 'admin' ? `${status.user.name} · Admin` : status.user.name;
-      signIn.setAttribute('href', '/admin.html');
+    const dock = document.getElementById('dock');
+    const signIn = dock?.querySelector('a[href^="/auth/google"]');
+    if (!dock) return;
+
+    if (status?.authenticated && status.user) {
+      const { name, role } = status.user;
+
+      // Replace the sign-in anchor with the user identity + sign-out button.
+      if (signIn) signIn.remove();
+
+      if (role === 'admin') {
+        const adminLink = document.createElement('a');
+        adminLink.href = '/admin.html';
+        adminLink.textContent = `${name} · Admin ↗`;
+        dock.append(adminLink);
+      } else {
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'dock-user';
+        nameSpan.textContent = name;
+        dock.append(nameSpan);
+      }
+
+      const signOutBtn = document.createElement('button');
+      signOutBtn.type = 'button';
+      signOutBtn.className = 'dock-item';
+      signOutBtn.textContent = 'Sign out';
+      signOutBtn.addEventListener('click', async () => {
+        try { await fetch('/auth/logout', { method: 'POST' }); } catch { /* ignore */ }
+        window.location.reload();
+      });
+      dock.append(signOutBtn);
     }
   })
   .catch(() => {});
