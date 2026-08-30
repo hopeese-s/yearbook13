@@ -90,8 +90,10 @@ export function loadEnv(source = process.env) {
   const sessionDir = source.SESSION_DIR ?? 'sessions';
 
   // --- Google OAuth (authentication ONLY; Drive permissions are a separate future flow) ---
-  const googleClientId = source.GOOGLE_CLIENT_ID;
-  const googleClientSecret = source.GOOGLE_CLIENT_SECRET;
+  // Trimmed: pasted values often carry stray spaces, which silently break OAuth.
+  const googleClientId = typeof source.GOOGLE_CLIENT_ID === 'string' ? source.GOOGLE_CLIENT_ID.trim() : '';
+  const googleClientSecret =
+    typeof source.GOOGLE_CLIENT_SECRET === 'string' ? source.GOOGLE_CLIENT_SECRET.trim() : '';
   // GOOGLE_CALLBACK_URL is optional: when unset, the callback is derived from
   // the incoming request host (see resolveCallbackUrl in auth.routes.js), so
   // only the client id/secret plus the Google Console redirect registration

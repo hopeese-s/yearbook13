@@ -113,6 +113,22 @@ test('unauthenticated /auth/status reports anonymous', async () => {
   assert.equal(res.body.user, null);
 });
 
+test('GET /auth/google/diag reports booleans only, never secret values', async () => {
+  const unconfigured = await request(await makeTestApp()).get('/auth/google/diag');
+  assert.equal(unconfigured.status, 200);
+  assert.equal(unconfigured.body.clientIdSet, false);
+  assert.equal(unconfigured.body.clientSecretSet, false);
+  assert.equal(unconfigured.body.oauthEnabled, false);
+
+  const configured = await request(await makeTestApp(OAUTH_CREDS)).get('/auth/google/diag');
+  assert.equal(configured.status, 200);
+  assert.equal(configured.body.clientIdSet, true);
+  assert.equal(configured.body.clientSecretSet, true);
+  assert.equal(configured.body.oauthEnabled, true);
+  // Secrets must never leak through the diagnostic.
+  assert.ok(!JSON.stringify(configured.body).includes('test-client-secret'));
+});
+
 test('callback URL: configured value wins, request host is the fallback', () => {
   const config = makeTestConfig({ ...OAUTH_CREDS });
   const fakeReq = { protocol: 'https', get: (header) => (header === 'host' ? 'ims13.up.railway.app' : undefined) };

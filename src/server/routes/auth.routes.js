@@ -107,6 +107,17 @@ export function authRoutes(config, passportInstance, oauthEnabled) {
     });
   });
 
+  // GET /auth/google/diag — booleans ONLY (never secret values). Lets you
+  // verify from a browser whether the running server sees the OAuth env vars.
+  router.get('/auth/google/diag', (_req, res) => {
+    res.json({
+      clientIdSet: Boolean(config.auth.google.clientId),
+      clientSecretSet: Boolean(config.auth.google.clientSecret),
+      callbackUrlSet: Boolean(config.auth.google.callbackUrl),
+      oauthEnabled: Boolean(config.auth.google.clientId && config.auth.google.clientSecret),
+    });
+  });
+
   // GET /auth/me â€” returns the current user object or 401.
   // Used by admin.js to identify who is signed in.
   router.get('/auth/me', (req, res) => {
