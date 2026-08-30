@@ -175,6 +175,11 @@ export function loadEnv(source = process.env) {
   }
   const driveImportEnabled = driveRaw === 'true';
 
+  // --- Google Drive import (optional; separate from login OAuth) ---
+  // Drive import activates when GOOGLE_DRIVE_API_KEY is set. The pasted
+  // Drive folder/file must be shared as "Anyone with the link".
+  const driveApiKey = typeof source.GOOGLE_DRIVE_API_KEY === 'string' ? source.GOOGLE_DRIVE_API_KEY.trim() : '';
+
   if (failures.length > 0) throw new ConfigError(failures);
 
   assert(nodeEnv && port && resolvedSessionStore && resolvedStorageDriver && resolvedDbDriver);
@@ -210,6 +215,7 @@ export function loadEnv(source = process.env) {
       r2: Object.freeze(r2),
     }),
     db: Object.freeze({ driver: resolvedDbDriver, url: databaseUrl }),
+    drive: Object.freeze({ apiKey: driveApiKey }),
     limits: Object.freeze({ jsonBodyLimit, authRateLimit, uploadRateLimit }),
   });
 }

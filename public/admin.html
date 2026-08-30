@@ -36,6 +36,7 @@
       <div id="admin-ui" class="admin-shell" hidden>
         <nav class="admin-nav glass" id="admin-nav" aria-label="Admin sections">
           <a href="#upload">Upload</a>
+          <a href="#drive">Drive import</a>
           <a href="#manage">Manage photos</a>
           <a href="#about">Info</a>
         </nav>
@@ -85,6 +86,25 @@
               <button class="btn" id="back-btn" type="button">Back</button>
               <button class="btn primary" id="next-btn" type="button">Next</button>
             </div>
+          </section>
+
+          <!-- ============ Google Drive import ============ -->
+          <section class="admin-panel glass" id="drive">
+            <h2>Import from Google Drive</h2>
+            <span class="muted">
+              Paste a Drive folder or photo link that is shared as “Anyone with the link” —
+              every photo inside is added straight to the wall (EXIF stripped, thumbnails generated).
+            </span>
+            <div class="field">
+              <label for="drive-url">Drive link</label>
+              <input id="drive-url" type="url" inputmode="url"
+                     placeholder="https://drive.google.com/drive/folders/…" autocomplete="off">
+            </div>
+            <button class="btn primary" id="drive-import-btn" type="button">Import photos</button>
+            <div class="progress-track" id="drive-progress" hidden>
+              <div class="progress-fill" id="drive-progress-fill"></div>
+            </div>
+            <ul class="result-list" id="drive-results"></ul>
           </section>
 
           <!-- ============ Manage (Multi-select + Marquee) ============ -->

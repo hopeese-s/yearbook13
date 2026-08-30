@@ -4,9 +4,11 @@ import { createErrorHandler, notFoundHandler } from './middleware/errors.js';
 import { healthRoutes } from './routes/health.routes.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { photoRoutes } from './routes/photo.routes.js';
+import { driveRoutes } from './routes/drive.routes.js';
 import { pagesRoutes } from './routes/pages.routes.js';
 import { createUploadMiddleware } from './middleware/upload.js';
 import { createUploadService } from '../uploads/upload.service.js';
+import { createDriveImportService } from '../services/drive-import.js';
 import { createPassport } from '../auth/passport.js';
 import { sessionMiddleware } from '../auth/session.js';
 import { createStorage } from '../storage/index.js';
@@ -27,7 +29,7 @@ export async function resolveAppDependencies(config, { storage, repository } = {
   };
 }
 
-export async function createApp(config, { extraRouters = [], storage, repository } = {}) {
+export async function createApp(config, { extraRouters = [], storage, repository, driveFetchImpl } = {}) {
   const app = express();
 
   applySecurity(app, config);
@@ -41,11 +43,13 @@ export async function createApp(config, { extraRouters = [], storage, repository
   const resolvedRepository = dependencies.repository;
   const uploadService = createUploadService({ storage: resolvedStorage, repository: resolvedRepository });
   const uploadMiddleware = createUploadMiddleware(config);
+  const driveImporter = createDriveImportService({ config, uploadService, fetchImpl: driveFetchImpl });
 
   const routers = [
     healthRoutes(config, { repository: resolvedRepository }),
     authRoutes(config, passport, enabled),
     photoRoutes({ config, storage: resolvedStorage, repository: resolvedRepository, uploadService, uploadMiddleware }),
+    driveRoutes({ config, driveImporter }),
     pagesRoutes(config),
     ...extraRouters,
   ];

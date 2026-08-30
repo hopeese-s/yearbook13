@@ -158,8 +158,11 @@ for (const [key, id] of Object.entries(metadataBindings)) {
 nextBtn.addEventListener('click', () => steps.next());
 backBtn.addEventListener('click', () => steps.back());
 
-// Upload with progress (XHR for progress events)
-document.getElementById('upload-btn').addEventListener('click', () => {
+// Upload with progress — files are sent in CHUNKS so large selections never
+// hit the server's per-request file cap ("Too many files").
+const UPLOAD_CHUNK_SIZE = 10;
+
+document.getElementById('upload-btn').addEventListener('click', async () => {
   const snapshot = steps.snapshot;
   if (snapshot.files.length === 0) return;
   const track = document.getElementById('progress-track');
@@ -171,49 +174,136 @@ document.getElementById('upload-btn').addEventListener('click', () => {
   results.replaceChildren();
   button.disabled = true;
 
-  const form = new FormData();
-  for (const file of snapshot.files) form.append('photos', file, file.name);
   const meta = snapshot.metadata;
-  if (meta.caption) form.append('caption', meta.caption);
-  if (meta.section) form.append('section', meta.section);
-  if (meta.year) form.append('year', meta.year);
-  if (meta.collections) form.append('collections', meta.collections);
-  if (meta.tags) form.append('tags', meta.tags);
-  if (meta.categories) form.append('categories', meta.categories);
+  const buildForm = (files) => {
+    const form = new FormData();
+    for (const file of files) form.append('photos', file, file.name);
+    if (meta.caption) form.append('caption', meta.caption);
+    if (meta.section) form.append('section', meta.section);
+    if (meta.year) form.append('year', meta.year);
+    if (meta.collections) form.append('collections', meta.collections);
+    if (meta.tags) form.append('tags', meta.tags);
+    if (meta.categories) form.append('categories', meta.categories);
+    return form;
+  };
 
-  const xhr = new XMLHttpRequest();
-  xhr.open('POST', '/api/photos');
-  xhr.upload.addEventListener('progress', (event) => {
-    if (event.lengthComputable) fill.style.transform = `scaleX(${event.loaded / event.total})`;
-  });
-  xhr.addEventListener('load', () => {
-    button.disabled = false;
-    let body = null;
-    try {
-      body = JSON.parse(xhr.responseText);
-    } catch {
-      // fall through
+  const chunks = [];
+  for (let index = 0; index < snapshot.files.length; index += UPLOAD_CHUNK_SIZE) {
+    chunks.push(snapshot.files.slice(index, index + UPLOAD_CHUNK_SIZE));
+  }
+
+  const mark = (ok, name, message) =>
+    results.append(el('li', { class: ok ? 'ok' : 'fail', text: `${ok ? '✓' : '✗'} ${name}${message ? ` — ${message}` : ''}` }));
+
+  let uploadedCount = 0;
+  let failedCount = 0;
+
+  for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
+    const chunk = chunks[chunkIndex];
+    const ok = await new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/photos');
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const overall = (chunkIndex + event.loaded / event.total) / chunks.length;
+          fill.style.transform = `scaleX(${overall})`;
+        }
+      });
+      xhr.addEventListener('load', () => {
+        let body = null;
+        try {
+          body = JSON.parse(xhr.responseText);
+        } catch {
+          // fall through
+        }
+        if (xhr.status >= 200 && xhr.status < 300 && body?.uploaded) {
+          for (const photo of body.uploaded) mark(true, photo.filename);
+          for (const failure of body.failed ?? []) mark(false, failure.filename, failure.message);
+          uploadedCount += body.uploaded.length;
+          failedCount += (body.failed ?? []).length;
+          resolve(true);
+        } else {
+          for (const file of chunk) mark(false, file.name, body?.error?.message ?? `HTTP ${xhr.status}`);
+          failedCount += chunk.length;
+          resolve(false);
+        }
+      });
+      xhr.addEventListener('error', () => {
+        for (const file of chunk) mark(false, file.name, 'Network error');
+        failedCount += chunk.length;
+        resolve(false);
+      });
+      xhr.send(buildForm(chunk));
+    });
+    fill.style.transform = `scaleX(${(chunkIndex + 1) / chunks.length})`;
+    if (!ok && chunkIndex < chunks.length - 1) {
+      const retry = window.confirm('A batch failed to upload. Continue with the remaining batches?');
+      if (!retry) break;
     }
-    if (xhr.status >= 200 && xhr.status < 300 && body?.uploaded) {
-      for (const photo of body.uploaded) results.append(el('li', { class: 'ok', text: `✓ ${photo.filename} uploaded` }));
-      for (const failure of body.failed ?? []) {
-        results.append(el('li', { class: 'fail', text: `✗ ${failure.filename}: ${failure.message}` }));
+  }
+
+  button.disabled = false;
+  fill.style.transform = 'scaleX(1)';
+  results.append(
+    el('li', {
+      class: uploadedCount > 0 && failedCount === 0 ? 'ok' : 'fail',
+      text: `Done — ${uploadedCount} uploaded, ${failedCount} failed.`,
+    }),
+  );
+
+  if (uploadedCount > 0) {
+    // Release object URLs and reset the wizard + visible form fields.
+    for (const file of snapshot.files) URL.revokeObjectURL(file.url);
+    steps.clearFiles();
+    for (const id of Object.values(metadataBindings)) document.getElementById(id).value = '';
+    steps.setMetadata({});
+    loadPhotos();
+  }
+});
+
+/* ---------- Google Drive import ---------- */
+document.getElementById('drive-import-btn').addEventListener('click', async () => {
+  const urlInput = document.getElementById('drive-url');
+  const results = document.getElementById('drive-results');
+  const track = document.getElementById('drive-progress');
+  const fill = document.getElementById('drive-progress-fill');
+  const button = document.getElementById('drive-import-btn');
+  const url = urlInput.value.trim();
+
+  if (!url) {
+    results.replaceChildren(el('li', { class: 'fail', text: '✗ Paste a Google Drive link first.' }));
+    return;
+  }
+
+  button.disabled = true;
+  track.hidden = false;
+  fill.style.transform = 'scaleX(0)';
+  results.replaceChildren(el('li', { class: 'ok', text: 'Importing from Drive… this can take up to a minute.' }));
+
+  try {
+    const res = await fetch('/api/drive/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const body = await res.json().catch(() => null);
+    results.replaceChildren();
+    if (res.ok && body) {
+      fill.style.transform = 'scaleX(1)';
+      for (const photo of body.uploaded ?? []) results.append(el('li', { class: 'ok', text: `✓ ${photo.filename} imported` }));
+      for (const failure of body.failed ?? []) results.append(el('li', { class: 'fail', text: `✗ ${failure.name} — ${failure.message}` }));
+      if ((body.uploaded?.length ?? 0) === 0 && (body.failed?.length ?? 0) === 0) {
+        results.append(el('li', { class: 'fail', text: '✗ No photos found in that link.' }));
       }
-      // Release object URLs and reset the wizard + visible form fields.
-      for (const file of snapshot.files) URL.revokeObjectURL(file.url);
-      steps.clearFiles();
-      for (const id of Object.values(metadataBindings)) document.getElementById(id).value = '';
-      steps.setMetadata({});
-      loadPhotos();
+      urlInput.value = '';
+      await loadPhotos();
     } else {
-      results.append(el('li', { class: 'fail', text: `✗ Upload failed: ${body?.error?.message ?? xhr.status}` }));
+      results.append(el('li', { class: 'fail', text: `✗ ${body?.error?.message ?? `HTTP ${res.status}`}` }));
     }
-  });
-  xhr.addEventListener('error', () => {
-    button.disabled = false;
-    results.append(el('li', { class: 'fail', text: '✗ Network error during upload' }));
-  });
-  xhr.send(form);
+  } catch {
+    results.append(el('li', { class: 'fail', text: '✗ Network error during import.' }));
+  }
+  button.disabled = false;
 });
 
 /* ---------- Manage: multi-select + marquee ---------- */
