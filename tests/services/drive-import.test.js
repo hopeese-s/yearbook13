@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import sharp from 'sharp';
 import request from 'supertest';
 import { createDriveImportService } from '../../src/services/drive-import.js';
@@ -7,6 +8,19 @@ import { createUploadService } from '../../src/uploads/upload.service.js';
 import { makeTestApp, makeTestConfig, testLoginRouter } from '../helpers.js';
 
 const KEY = { GOOGLE_DRIVE_API_KEY: 'test-drive-key' };
+
+/** Generates a throwaway RSA keypair and the matching SA JSON key. */
+function makeServiceAccount() {
+  const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+  return {
+    json: JSON.stringify({
+      client_email: 'yearbook-import@ims13.iam.gserviceaccount.com',
+      private_key: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+    }),
+    email: 'yearbook-import@ims13.iam.gserviceaccount.com',
+    publicPem: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+  };
+}
 
 async function makeJpeg(width = 40, height = 30) {
   return sharp({ create: { width, height, channels: 3, background: 'teal' } }).jpeg().toBuffer();
@@ -197,5 +211,101 @@ test('POST /api/drive/import end to end through the fake Drive API', async () =>
   assert.equal(res.body.uploaded.length, 1);
   assert.equal(res.body.total, 1);
   assert.deepEqual(res.body.uploaded[0].collections, ['drive']);
+});
+
+// ---- Service account mode ----
+
+test('service account mode signs a real JWT and calls Drive with a Bearer token', async () => {
+  const sa = makeServiceAccount();
+  const jpeg = await makeJpeg(30, 20);
+  const captured = { publicPem: sa.publicPem };
+
+  const fetchImpl = async (url, options = {}) => {
+    if (url === 'https://oauth2.googleapis.com/token') {
+      captured.assertion = new URLSearchParams(options.body).get('assertion');
+      const [header, claims, signature] = captured.assertion.split('.');
+      const signatureValid = crypto.verify(
+        'RSA-SHA256',
+        Buffer.from(`${header}.${claims}`),
+        sa.publicPem,
+        Buffer.from(signature, 'base64url'),
+      );
+      captured.jwtSignatureValid = signatureValid;
+      captured.claims = JSON.parse(Buffer.from(claims, 'base64url').toString());
+      return { ok: true, json: async () => ({ access_token: 'sa-token-123', expires_in: 3600 }) };
+    }
+    const copy = Buffer.from(jpeg);
+    if (url.includes('alt=media')) {
+      captured.authHeader = options.headers?.Authorization;
+      return {
+        ok: true,
+        status: 200,
+        arrayBuffer: async () => copy.buffer.slice(copy.byteOffset, copy.byteOffset + copy.byteLength),
+      };
+    }
+    if (url.includes('/drive/v3/files')) {
+      captured.authHeader = options.headers?.Authorization;
+      return {
+        ok: true,
+        json: async () => ({ files: [{ id: 'sa1', name: 'shared.jpg', mimeType: 'image/jpeg', size: String(jpeg.length) }] }),
+      };
+    }
+    return { ok: false, status: 400, json: async () => ({}) };
+  };
+
+  const service = createDriveImportService({
+    config: makeTestConfig({ GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: sa.json }),
+    uploadService: createUploadService({ storage: fakeStorage(), repository: fakeRepository() }),
+    fetchImpl,
+  });
+
+  const result = await service.importFromDrive({ url: 'https://drive.google.com/drive/folders/1AbCdeFghIjkLmnoPqrStu' });
+  assert.equal(result.uploaded.length, 1);
+  assert.equal(captured.jwtSignatureValid, true, 'JWT must be correctly RS256-signed');
+  assert.equal(captured.claims.iss, sa.email);
+  assert.equal(captured.claims.scope, 'https://www.googleapis.com/auth/drive.readonly');
+  assert.equal(captured.authHeader, 'Bearer sa-token-123');
+});
+
+test('service account 404 error message names both sharing options', async () => {
+  const sa = makeServiceAccount();
+  const fetchImpl = async (url) => {
+    if (url.includes('/drive/v3/files') && !url.includes('oauth2')) {
+      return { ok: false, status: 404, json: async () => ({ error: { message: 'File not found' } }) };
+    }
+    return { ok: true, json: async () => ({ access_token: 'tok' }) };
+  };
+
+  const service = createDriveImportService({
+    config: makeTestConfig({ GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: sa.json }),
+    uploadService: createUploadService({ storage: fakeStorage(), repository: fakeRepository() }),
+    fetchImpl,
+  });
+
+  await assert.rejects(
+    () => service.importFromDrive({ url: 'https://drive.google.com/drive/folders/1AbCdeFghIjkLmnoPqrStu' }),
+    (err) => {
+      assert.equal(err.code, 'DRIVE_API_ERROR');
+      assert.match(err.message, /Anyone with the link/);
+      assert.match(err.message, /yearbook-import@ims13\.iam\.gserviceaccount\.com/);
+      return true;
+    },
+  );
+});
+
+test('GET /api/drive/config reports service-account mode when configured', async () => {
+  const sa = makeServiceAccount();
+  const app = await makeTestApp(
+    { ...KEY, GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: sa.json },
+    { extraRouters: [testLoginRouter()] },
+  );
+  const agent = request.agent(app);
+  await agent.post('/test/login').expect(200);
+
+  const res = await agent.get('/api/drive/config');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.mode, 'service-account');
+  assert.equal(res.body.serviceAccountEmail, sa.email);
+  assert.ok(!JSON.stringify(res.body).includes('PRIVATE KEY'), 'the key must never leave the server');
 });
 

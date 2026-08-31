@@ -267,7 +267,9 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
 });
 
 /* ---------- Google Drive import ---------- */
-document.getElementById('drive-import-btn').addEventListener('click', async () => {  const urlInput = document.getElementById('drive-url');
+
+document.getElementById('drive-import-btn').addEventListener('click', async () => {
+  const urlInput = document.getElementById('drive-url');
   const results = document.getElementById('drive-results');
   const track = document.getElementById('drive-progress');
   const fill = document.getElementById('drive-progress-fill');
