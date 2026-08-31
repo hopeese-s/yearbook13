@@ -1,6 +1,5 @@
 /* Liquid Glass material: blur + saturate + specular top edge + soft border.
-   Tuned for light surfaces: translucent white glass, hairline border,
-   diffuse shadow. */
+   Uses CSS vars so it adapts to both light and dark themes. */
 
 .glass {
   position: relative;
@@ -10,9 +9,9 @@
   border-radius: var(--r-lg);
   border: 1px solid var(--glass-border);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.85) inset,   /* top specular edge */
-    0 -1px 0 rgba(0, 0, 0, 0.03) inset,
-    0 18px 40px rgba(0, 0, 0, 0.08);
+    0 1px 0 var(--glass-edge) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.04) inset,
+    0 18px 40px rgba(0, 0, 0, 0.1);
 }
 
 /* Refractive highlight sweeping the top rim. */
@@ -24,18 +23,18 @@
   pointer-events: none;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.65) 0%,
-    rgba(255, 255, 255, 0.2) 12%,
-    transparent 30%,
+    var(--glass-edge) 0%,
+    transparent 18%,
     transparent 100%
   );
+  opacity: 0.6;
 }
 
 .glass-strong {
   background: var(--glass-fill-strong);
 }
 
-/* Neumorphic raised plate (skeuomorphic physicality, light). */
+/* Neumorphic raised plate (skeuomorphic physicality). */
 .neu {
   background: linear-gradient(145deg, var(--bg-1), var(--bg-2));
   border-radius: var(--r-md);

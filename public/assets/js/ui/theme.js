@@ -1,8 +1,9 @@
 /**
- * Theme switcher: handles Dark / Light Liquid Glass theme toggling with localStorage persistence.
+ * Theme switcher: Dark / Light Liquid Glass, persisted via localStorage.
  */
 
 const STORAGE_KEY = 'ims13-theme';
+const THEME_COLORS = { dark: '#0a0c14', light: '#f5f5f7' };
 
 export function getTheme() {
   const stored = localStorage.getItem(STORAGE_KEY);
@@ -14,31 +15,31 @@ export function setTheme(theme) {
   const target = theme === 'dark' ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', target);
   localStorage.setItem(STORAGE_KEY, target);
+  // Update the browser chrome / PWA bar color
+  const metaColor = document.querySelector('meta[name="theme-color"]');
+  if (metaColor) metaColor.content = THEME_COLORS[target];
   updateToggleButtons(target);
   return target;
 }
 
 export function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme') || getTheme();
-  const next = current === 'dark' ? 'light' : 'dark';
-  return setTheme(next);
+  return setTheme(current === 'dark' ? 'light' : 'dark');
 }
 
 function updateToggleButtons(theme) {
-  const btns = document.querySelectorAll('.theme-toggle');
-  for (const btn of btns) {
+  for (const btn of document.querySelectorAll('.theme-toggle')) {
     btn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
-    btn.innerHTML = theme === 'dark' ? '<span aria-hidden="true">☀️</span>' : '<span aria-hidden="true">🌙</span>';
+    btn.innerHTML = theme === 'dark' ? '☀️' : '🌙';
   }
 }
 
 export function initTheme(button) {
-  const current = document.documentElement.getAttribute('data-theme') || getTheme();
+  // Apply the persisted/preferred theme immediately
+  const current = getTheme();
   setTheme(current);
 
   if (button) {
-    button.classList.add('theme-toggle');
     button.addEventListener('click', () => toggleTheme());
-    updateToggleButtons(current);
   }
 }

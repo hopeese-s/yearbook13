@@ -126,5 +126,14 @@
   --titlebar-lo: rgba(0, 0, 0, 0.35);
 
   --hairline: rgba(255, 255, 255, 0.12);
+  --ink-on-accent: #ffffff;
+
+  /* --- Glass saturate override for dark (less pumped-up) --- */
+  --glass-saturate: 120%;
+
+  /* --- Status colors (slightly brighter on dark) --- */
+  --ok: #30d158;
+  --warn: #ffd60a;
+  --danger: #ff453a;
 }
 

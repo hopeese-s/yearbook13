@@ -67,18 +67,22 @@
   width: 100%;
   padding: 7px 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border);
   color: var(--ink-hi);
   font-size: 0.86rem;
   outline: none;
   transition: border-color var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
 }
 
+.search-box input::placeholder {
+  color: var(--ink-lo);
+}
+
 .search-box input:focus {
   border-color: rgba(var(--accent-rgb), 0.6);
-  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.25);
-  background: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.22);
+  background: var(--glass-fill-strong);
 }
 
 /* Dock-style nav (skeuomorphic hint of the macOS dock). */
@@ -106,7 +110,7 @@
 .dock a:hover,
 .dock button.dock-item:hover {
   color: var(--ink-hi);
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--glass-fill-strong);
   transform: translateY(-1px);
 }
 
@@ -310,9 +314,8 @@
   min-height: 548px;
   isolation: isolate;
   background:
-    linear-gradient(112deg, rgba(255, 255, 255, 0.92) 0%, rgba(250, 250, 252, 0.6) 47%, rgba(255, 255, 255, 0.25) 100%),
-    radial-gradient(circle at 77% 45%, rgba(0, 113, 227, 0.07), transparent 31%),
-    radial-gradient(circle at 91% 8%, rgba(94, 92, 230, 0.08), transparent 24%),
+    radial-gradient(circle at 77% 45%, var(--aurora-blue), transparent 31%),
+    radial-gradient(circle at 91% 8%, var(--aurora-violet), transparent 24%),
     var(--bg-1);
 }
 
@@ -321,8 +324,9 @@
   position: absolute;
   inset: 0;
   z-index: -1;
+  pointer-events: none;
   opacity: 0.8;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 45%);
+  background: linear-gradient(180deg, var(--glass-edge), transparent 45%);
 }
 
 .hero-archive::after {
@@ -331,13 +335,15 @@
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), transparent 24%, transparent 72%, rgba(94, 92, 230, 0.05));
+  z-index: -1;
+  background: linear-gradient(135deg, var(--aurora-teal), transparent 24%, transparent 72%, var(--aurora-violet));
 }
 
 .hero-canvas,
 .hero-fallback {
   position: absolute;
   inset: 0;
+  pointer-events: none;
 }
 
 .hero-copy {
@@ -345,9 +351,9 @@
   left: clamp(20px, 5vw, 56px);
   top: 50%;
   transform: translateY(-50%);
-  max-width: 500px;
+  max-width: 460px;
   pointer-events: none;
-  z-index: 3;
+  z-index: 4;
   padding: 28px 32px;
   border-radius: var(--r-lg);
   background: var(--glass-fill);
@@ -358,7 +364,7 @@
 }
 
 .hero-copy h1 {
-  font-size: clamp(2.2rem, 5.5vw, 3.6rem);
+  font-size: clamp(2rem, 5.5vw, 3.4rem);
   font-weight: 800;
   line-height: 1.06;
   color: var(--ink-hi);
@@ -371,12 +377,12 @@
 .hero-copy p {
   color: var(--ink-mid);
   margin: 14px 0 0;
-  font-size: 1.06rem;
-  line-height: 1.5;
-  font-weight: 480;
+  font-size: 1rem;
+  line-height: 1.55;
 }
 
 .hero-action {
+  display: block;
   pointer-events: auto;
   margin-top: 24px;
 }
@@ -416,9 +422,10 @@
   pointer-events: none;
 }
 
+/* Canvas uses window-level pointermove for tilt — no need to capture clicks here */
 .hero-mount canvas,
 .hero-mount .hero-fallback {
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .wall-heading {
