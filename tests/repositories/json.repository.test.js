@@ -94,6 +94,9 @@ test('listPhotos sorts newest/oldest and paginates deterministically', async () 
   const byOldest = [...created].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const oldest = await repo.listPhotos({ sort: 'oldest', limit: 2, offset: 1 });
   assert.deepEqual(oldest.items.map((r) => r.id), [byOldest[1].id, byOldest[2].id]);
+
+  const largeLimit = await repo.listPhotos({ limit: 1000 });
+  assert.equal(largeLimit.limit, 1000);
 });
 
 test('missing metadata file starts empty', async () => {

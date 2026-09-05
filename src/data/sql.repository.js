@@ -86,7 +86,7 @@ export async function createSqlRepository(config, { pool } = {}) {
       });
 
       const total = items.length;
-      const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 200);
+      const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 5000);
       const offset = Math.max(Number(query.offset) || 0, 0);
       return { items: items.slice(offset, offset + limit), total, limit, offset };
     },

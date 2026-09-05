@@ -8,6 +8,18 @@
   align-items: start;
 }
 
+.admin-content {
+  min-width: 0;
+  width: 100%;
+}
+
+.row-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
 .admin-nav {
   position: sticky;
   top: 86px;
@@ -149,6 +161,10 @@
   border-radius: var(--r-md);
   position: relative;
   min-height: 96px;
+}
+
+.batch-strip:not(:has(.batch-item)) {
+  display: none;
 }
 
 .batch-item {
@@ -429,12 +445,21 @@
   }
 
   .admin-nav {
-    position: static;
+    position: sticky;
+    top: 54px;
+    z-index: calc(var(--z-content) + 5);
     flex-direction: row;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    padding: 10px 8px;
+    padding: 8px 10px;
+    gap: 6px;
+    background: var(--glass-fill-strong);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-radius: var(--r-md);
+    margin-bottom: 8px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
   }
 
   .admin-nav::-webkit-scrollbar {
@@ -443,44 +468,186 @@
 
   .admin-nav a {
     white-space: nowrap;
-    padding: 8px 12px;
-    font-size: 0.88rem;
+    padding: 7px 14px;
+    font-size: 0.84rem;
+    border-left: none;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  .admin-nav a.active {
+    background: var(--accent);
+    color: #fff;
+    border-left: none;
   }
 
   .admin-panel {
     padding: 16px;
     margin-bottom: 16px;
+    border-radius: var(--r-md);
   }
 
   .dropzone {
-    padding: 24px 14px;
+    padding: 22px 14px;
   }
 
   .photo-grid {
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
     gap: 8px;
   }
 }
 
+@media (max-width: 600px) {
+  .field input[type='text'],
+  .field input[type='url'],
+  .field input[type='number'],
+  .field input[type='search'],
+  .field textarea {
+    font-size: 1rem; /* 16px minimum prevents iOS Safari auto-zoom */
+    padding: 9px 12px;
+  }
+
+  .share-hint {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .share-hint-email {
+    font-size: 0.8rem;
+    word-break: break-all;
+    white-space: normal;
+  }
+
+  .share-hint .btn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+
+  #drive-import-btn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    padding: 10px 16px;
+  }
+
+  #manage .toolbar {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  #manage .toolbar #selection-count {
+    grid-column: 1 / -1;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  #manage .toolbar .spacer {
+    display: none;
+  }
+
+  #manage .toolbar .btn {
+    padding: 8px 4px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    text-align: center;
+    justify-content: center;
+  }
+}
+
 @media (max-width: 500px) {
+  .admin-panel {
+    padding: 14px 12px;
+  }
+
   .steps {
+    display: flex;
     gap: 4px;
+    width: 100%;
+    margin-bottom: 14px;
   }
 
   .step {
-    font-size: 0.78rem;
-    padding: 6px 10px;
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 0.72rem;
+    padding: 6px 4px;
+    justify-content: center;
+    text-align: center;
+    gap: 4px;
+  }
+
+  .step .dot {
+    width: 17px;
+    height: 17px;
+    font-size: 0.65rem;
+    flex-shrink: 0;
+  }
+
+  .step span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .step-arrow {
     display: none;
   }
 
+  .batch-strip {
+    padding: 8px;
+    gap: 6px;
+  }
+
   .batch-item {
-    width: 76px;
+    width: 68px;
+  }
+
+  .batch-item img {
+    height: 52px;
   }
 
   .photo-grid {
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    gap: 6px;
+  }
+
+  .grid-item .item-check {
+    top: 4px;
+    right: 4px;
+    width: 26px;
+    height: 26px;
+    font-size: 0.8rem;
+  }
+
+  .grid-item .item-caption {
+    font-size: 0.64rem;
+    padding: 3px 4px;
+  }
+
+  #export-zip-btn {
+    display: flex;
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    padding: 10px 16px;
+  }
+
+  #about p strong {
+    word-break: break-all;
+  }
+
+  .auth-gate {
+    padding: 36px 14px;
+  }
+
+  .auth-gate .btn {
+    width: 100%;
+    max-width: 280px;
+    justify-content: center;
   }
 }

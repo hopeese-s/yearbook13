@@ -1267,3 +1267,16 @@
     padding: 14px 14px;
   }
 }
+
+/* --- Load More Wrap --- */
+.load-more-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 32px 0 16px;
+}
+
+.load-more-wrap .btn {
+  padding: 10px 24px;
+  font-size: 0.92rem;
+  box-shadow: var(--neu-out);
+}

@@ -372,6 +372,7 @@ function renderGrid() {
 
     item.addEventListener('click', (event) => {
       const isCheckClicked = Boolean(event.target.closest('.item-check'));
+      const isTouch = window.matchMedia('(pointer: coarse)').matches;
 
       if (event.shiftKey && lastSelectedIndex >= 0) {
         // Shift+Click: range selection from last clicked to current
@@ -380,7 +381,7 @@ function renderGrid() {
         for (let i = start; i <= end; i++) {
           if (photos[i]) selected.add(photos[i].id);
         }
-      } else if (event.ctrlKey || event.metaKey || isCheckClicked) {
+      } else if (event.ctrlKey || event.metaKey || isCheckClicked || (isTouch && selected.size > 0)) {
         // Toggle single selection
         if (selected.has(photo.id)) {
           selected.delete(photo.id);
@@ -390,9 +391,13 @@ function renderGrid() {
         }
       } else {
         // Single selection
-        selected.clear();
-        selected.add(photo.id);
-        lastSelectedIndex = photoIndex;
+        if (isTouch && selected.has(photo.id)) {
+          selected.delete(photo.id);
+        } else {
+          selected.clear();
+          selected.add(photo.id);
+          lastSelectedIndex = photoIndex;
+        }
       }
       renderSelection();
     });
@@ -540,7 +545,7 @@ if (bulkEditBtn) {
 async function loadPhotos() {
   renderState(manageState, { kind: 'loading', detail: 'Loading photos…' });
   try {
-    const result = await fetch('/api/photos?limit=200').then((res) => res.json());
+    const result = await fetch('/api/photos?limit=5000').then((res) => res.json());
     photos = result.items ?? [];
     manageState.hidden = photos.length > 0;
     if (photos.length === 0) {

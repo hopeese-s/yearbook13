@@ -22,6 +22,8 @@ const carouselNav = document.getElementById('carousel-nav');
 const heroMount = document.getElementById('hero-mount');
 const wallCount = document.getElementById('wall-count');
 const themeToggle = document.getElementById('theme-toggle');
+const loadMoreWrap = document.getElementById('gallery-load-more');
+const loadMoreBtn = document.getElementById('load-more-btn');
 
 const foldersDrawer = document.getElementById('folders-drawer');
 const foldersBackdrop = document.getElementById('folders-backdrop');
@@ -151,6 +153,49 @@ function renderGallery() {
     // Single click -> Mac Preview window; double click -> fullscreen quick view.
     renderMasonry(masonryRoot, photos, { onOpen: openPreview, onQuickView: openQuickView });
   }
+
+  if (loadMoreWrap) {
+    const canLoadMore = !carouselOn && allPhotos.length < galleryTotal;
+    loadMoreWrap.hidden = !canLoadMore;
+  }
+}
+
+let isLoadingMore = false;
+async function loadMorePhotos() {
+  if (isLoadingMore || allPhotos.length >= galleryTotal) return;
+  isLoadingMore = true;
+  if (loadMoreBtn) {
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.textContent = 'Loading more…';
+  }
+  try {
+    const result = await getPhotos({ limit: 1000, offset: allPhotos.length });
+    const newItems = result.items ?? [];
+    if (newItems.length > 0) {
+      allPhotos = [...allPhotos, ...newItems];
+      galleryTotal = Number(result.total ?? allPhotos.length);
+      foldersManager.setPhotos(allPhotos);
+      const collections = [...new Set(allPhotos.flatMap((photo) => photo.collections ?? []))];
+      chips = initChips(chipsRoot, collections, {
+        onSelect: (value) => {
+          activeCollection = value;
+          chips.setActive(value);
+          foldersManager.setCurrentFolder(value);
+          renderGallery();
+        },
+      });
+      if (activeCollection) chips.setActive(activeCollection);
+      renderGallery();
+    }
+  } catch (err) {
+    console.warn('[Gallery] Failed to load more photos:', err);
+  } finally {
+    isLoadingMore = false;
+    if (loadMoreBtn) {
+      loadMoreBtn.disabled = false;
+      loadMoreBtn.textContent = 'Load more photographs';
+    }
+  }
 }
 
 function setViewCarousel(on) {
@@ -169,7 +214,7 @@ carouselNav.addEventListener('click', (event) => {
 
 async function boot() {
   try {
-    const result = await getPhotos({ limit: 200 });
+    const result = await getPhotos({ limit: 1000 });
     allPhotos = result.items ?? [];
     galleryTotal = Number(result.total ?? allPhotos.length);
     foldersManager.setPhotos(allPhotos);
@@ -202,9 +247,20 @@ async function boot() {
     initHero(heroMount, allPhotos).catch(() => {});
     renderGallery();
 
+    loadMoreBtn?.addEventListener('click', loadMorePhotos);
+
+    if ('IntersectionObserver' in window && loadMoreWrap) {
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0]?.isIntersecting && !loadMoreWrap.hidden) {
+          loadMorePhotos();
+        }
+      }, { rootMargin: '400px' });
+      observer.observe(loadMoreWrap);
+    }
+
     // Register Service Worker for PWA support
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js?v=20260905v6').catch(() => {});
+      navigator.serviceWorker.register('/sw.js?v=20260905v7').catch(() => {});
     }
   } catch (err) {
     renderState(statePanel, { kind: 'error', detail: err.message });
