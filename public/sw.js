@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ims13-v3';
+const CACHE_NAME = 'ims13-v4';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

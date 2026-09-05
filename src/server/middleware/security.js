@@ -32,7 +32,7 @@ export function applySecurity(app, config) {
           imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
           // fetch() calls to /api/ and /auth/ endpoints.
           connectSrc: ["'self'"],
-          frameSrc: ["'self'", 'https://drive.google.com'],
+          frameSrc: ["'self'", 'https://drive.google.com', 'https://*.google.com', 'https://*.googleusercontent.com'],
           mediaSrc: ["'self'", 'https:', 'blob:', 'data:'],
           styleSrc: ["'self'", "'unsafe-inline'"],
           fontSrc: ["'self'"],

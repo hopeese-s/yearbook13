@@ -25,6 +25,8 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
     if (!record) return record;
     const fileUrl =
       record.externalUrl ||
+      record.embedUrl ||
+      (record.driveFileId ? `https://drive.google.com/file/d/${encodeURIComponent(record.driveFileId)}/preview` : null) ||
       (record.storageKey ? storage.publicUrl(record.storageKey) : null) ||
       `/api/photos/${record.id}/file`;
     const thumbUrl =
@@ -156,6 +158,12 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
       const record = await repository.getPhoto(req.params.id);
       if (record?.externalUrl) {
         return res.redirect(record.externalUrl);
+      }
+      if (record?.embedUrl) {
+        return res.redirect(record.embedUrl);
+      }
+      if (record?.driveFileId) {
+        return res.redirect(`https://drive.google.com/file/d/${encodeURIComponent(record.driveFileId)}/preview`);
       }
       const mime = getMimeType(record?.storageKey, 'application/octet-stream');
       await sendObject(res, record?.storageKey, mime)(record);

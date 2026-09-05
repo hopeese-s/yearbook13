@@ -88,7 +88,7 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
     return res;
   }
 
-  async function listFolder(folderId) {
+  async function listFolder(folderId, depth = 0) {
     const files = [];
     let pageToken;
     do {
@@ -102,7 +102,21 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
       if (pageToken) params.set('pageToken', pageToken);
       const res = await driveFetch(`/files?${params.toString()}`);
       const body = await res.json();
-      files.push(...(body.files ?? []));
+      const pageFiles = body.files ?? [];
+      for (const item of pageFiles) {
+        if (item.mimeType === 'application/vnd.google-apps.folder') {
+          if (depth < 2 && files.length < MAX_FILES_PER_IMPORT) {
+            try {
+              const subFiles = await listFolder(item.id, depth + 1);
+              files.push(...subFiles);
+            } catch {
+              // ignore subfolder traversal failures
+            }
+          }
+        } else {
+          files.push(item);
+        }
+      }
       pageToken = body.nextPageToken;
     } while (pageToken && files.length < MAX_FILES_PER_IMPORT);
     return files.slice(0, MAX_FILES_PER_IMPORT);
@@ -144,16 +158,32 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
     let entries;
     if (link.kind === 'folder') {
       entries = await listFolder(link.id);
+      if (entries.length === 0) {
+        const saEmail = serviceAccount?.client_email;
+        const msg = saEmail
+          ? `Google Drive API requires sharing this folder directly with ${saEmail} (Viewer access). In Google Drive, right-click the folder, click Share, and add this email.`
+          : 'No photos or videos found in that folder. Please make sure the folder is shared as "Anyone with the link".';
+        throw new DriveImportError('NO_IMAGES', msg, 422);
+      }
     } else {
       entries = [await fileMetadata(link.id)];
     }
 
-    const allCandidates = entries.filter(
-      (file) =>
-        typeof file.mimeType === 'string' &&
-        (file.mimeType.startsWith(IMAGE_MIME_PREFIX) || file.mimeType.startsWith(VIDEO_MIME_PREFIX)) &&
-        !file.mimeType.startsWith(GOOGLE_APP_MIME_PREFIX),
-    );
+    const isCandidateMedia = (file) => {
+      const mime = file.mimeType ?? '';
+      const name = file.name ?? '';
+      if (mime.startsWith(GOOGLE_APP_MIME_PREFIX)) return false;
+      if (mime.startsWith(IMAGE_MIME_PREFIX) || mime.startsWith(VIDEO_MIME_PREFIX)) return true;
+      return /\.(jpe?g|png|webp|gif|avif|heic|mp4|webm|mov|m4v|mkv)$/i.test(name);
+    };
+
+    const isVideoMedia = (file) => {
+      const mime = file.mimeType ?? '';
+      const name = file.name ?? '';
+      return mime.startsWith(VIDEO_MIME_PREFIX) || /\.(mp4|webm|mov|m4v|mkv)$/i.test(name);
+    };
+
+    const allCandidates = entries.filter(isCandidateMedia);
 
     if (allCandidates.length === 0) {
       throw new DriveImportError(
@@ -168,8 +198,7 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
     // so no file size limit is imposed. For images: upload size limits still apply.
     const mediaFiles = allCandidates
       .filter((file) => {
-        const isVideo = file.mimeType?.startsWith(VIDEO_MIME_PREFIX);
-        if (isVideo) return true;
+        if (isVideoMedia(file)) return true;
         return Number(file.size ?? 0) <= maxBytes;
       })
       .slice(0, MAX_FILES_PER_IMPORT);
@@ -191,7 +220,7 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
       const chunk = mediaFiles.slice(index, index + CONCURRENCY);
       const settled = await Promise.allSettled(
         chunk.map(async (file) => {
-          const isVideo = file.mimeType?.startsWith(VIDEO_MIME_PREFIX);
+          const isVideo = isVideoMedia(file);
           if (isVideo && typeof uploadService.createExternalMediaRecord === 'function') {
             const embedUrl = `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview`;
             const externalThumbUrl = file.thumbnailLink ? file.thumbnailLink.replace(/=s\d+$/, '=s640') : '';
@@ -200,7 +229,7 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
 
             return uploadService.createExternalMediaRecord({
               originalName: file.name,
-              mimeType: file.mimeType,
+              mimeType: file.mimeType || 'video/mp4',
               externalUrl: embedUrl,
               embedUrl,
               externalThumbUrl,

@@ -26,13 +26,22 @@ export function createLightbox() {
       const driveId =
         photo.driveFileId ||
         photo.embedUrl?.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1] ||
-        photo.fileUrl?.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1];
-      const isDrive = Boolean(driveId || photo.embedUrl || photo.fileUrl?.includes('drive.google.com'));
+        photo.fileUrl?.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1] ||
+        photo.fileUrl?.match(/[?&]id=([a-zA-Z0-9_-]+)/)?.[1] ||
+        photo.externalUrl?.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1] ||
+        photo.externalUrl?.match(/[?&]id=([a-zA-Z0-9_-]+)/)?.[1];
+      const isDrive = Boolean(
+        driveId ||
+        photo.embedUrl ||
+        photo.fileUrl?.includes('drive.google.com') ||
+        photo.externalUrl?.includes('drive.google.com')
+      );
 
       if (isDrive) {
         const src =
+          (driveId ? `https://drive.google.com/file/d/${encodeURIComponent(driveId)}/preview` : null) ||
           photo.embedUrl ||
-          (driveId ? `https://drive.google.com/file/d/${encodeURIComponent(driveId)}/preview` : photo.fileUrl);
+          photo.fileUrl;
         media = el('iframe', {
           src,
           allow: 'autoplay; fullscreen',

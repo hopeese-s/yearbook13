@@ -6,12 +6,12 @@
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#f5f5f7">
   <title>Admin · IMS13 Yearbook</title>
-  <link rel="stylesheet" href="/assets/css/tokens.css?v=20260905v3">
-  <link rel="stylesheet" href="/assets/css/base.css?v=20260905v3">
-  <link rel="stylesheet" href="/assets/css/glass.css?v=20260905v3">
-  <link rel="stylesheet" href="/assets/css/focus.css?v=20260905v3">
-  <link rel="stylesheet" href="/assets/css/components.css?v=20260905v3">
-  <link rel="stylesheet" href="/assets/css/admin.css?v=20260905v3">
+  <link rel="stylesheet" href="/assets/css/tokens.css?v=20260905v4">
+  <link rel="stylesheet" href="/assets/css/base.css?v=20260905v4">
+  <link rel="stylesheet" href="/assets/css/glass.css?v=20260905v4">
+  <link rel="stylesheet" href="/assets/css/focus.css?v=20260905v4">
+  <link rel="stylesheet" href="/assets/css/components.css?v=20260905v4">
+  <link rel="stylesheet" href="/assets/css/admin.css?v=20260905v4">
   <script>
     const t = localStorage.getItem('ims13-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     document.documentElement.setAttribute('data-theme', t);
@@ -101,12 +101,12 @@
           <section class="admin-panel glass" id="drive">
             <h2>Import from Google Drive</h2>
             <span class="muted">
-              Paste a Drive folder or photo link. The owner must share it — either as
-              “Anyone with the link”, or directly to the import account below.
+              <strong>For folders:</strong> In Google Drive, share the folder directly with the service account email below (Viewer).<br>
+              <strong>For single files:</strong> "Anyone with the link" or direct sharing is supported.
             </span>
             <div class="share-hint neu" id="drive-share-hint" hidden>
               <div class="share-hint-text">
-                <span class="share-hint-label">Share folders to</span>
+                <span class="share-hint-label">Share Drive folders to</span>
                 <span class="share-hint-email" id="drive-sa-email">…</span>
               </div>
               <button class="btn" id="copy-sa-email" type="button">Copy</button>
@@ -156,6 +156,6 @@
     </div>
   </main>
 
-  <script type="module" src="/assets/js/admin/admin.js?v=20260905v3"></script>
+  <script type="module" src="/assets/js/admin/admin.js?v=20260905v4"></script>
 </body>
 </html>

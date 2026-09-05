@@ -365,3 +365,52 @@ test('GET /api/drive/config reports service-account mode when configured', async
   assert.ok(!JSON.stringify(res.body).includes('PRIVATE KEY'), 'the key must never leave the server');
 });
 
+test('drive import detects video by filename extension even when mimeType is application/octet-stream', async () => {
+  const service = serviceWith({
+    octet_video_1234: {
+      meta: {
+        id: 'octet_video_1234',
+        name: 'DSC_1997.MP4',
+        mimeType: 'application/octet-stream',
+        size: '319291392',
+        thumbnailLink: 'https://lh3.googleusercontent.com/u/0/d/octet_video=s220',
+      },
+      bytes: Buffer.alloc(0),
+    },
+  });
+
+  const result = await service.importFromDrive({ url: 'https://drive.google.com/file/d/octet_video_1234/view' });
+  assert.equal(result.uploaded.length, 1);
+  assert.equal(result.uploaded[0].filename, 'DSC_1997.MP4');
+  assert.equal(result.uploaded[0].mediaType, 'video');
+  assert.equal(result.uploaded[0].embedUrl, 'https://drive.google.com/file/d/octet_video_1234/preview');
+  assert.equal(result.uploaded[0].driveFileId, 'octet_video_1234');
+});
+
+test('drive import provides actionable error when folder is unshared / returns zero files in service-account mode', async () => {
+  const sa = makeServiceAccount();
+  const fetchImpl = async (url) => {
+    if (url.includes('parents')) {
+      return { ok: true, json: async () => ({ files: [] }) };
+    }
+    return { ok: true, json: async () => ({ access_token: 'tok' }) };
+  };
+
+  const service = createDriveImportService({
+    config: makeTestConfig({ GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: sa.json }),
+    uploadService: createUploadService({ storage: fakeStorage(), repository: fakeRepository() }),
+    fetchImpl,
+  });
+
+  await assert.rejects(
+    () => service.importFromDrive({ url: 'https://drive.google.com/drive/folders/1emptyFolderId123456789' }),
+    (err) => {
+      assert.equal(err.code, 'NO_IMAGES');
+      assert.match(err.message, /requires sharing this folder directly with/i);
+      assert.match(err.message, /yearbook-import@ims13\.iam\.gserviceaccount\.com/);
+      return true;
+    },
+  );
+});
+
+
