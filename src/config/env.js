@@ -119,11 +119,11 @@ export function loadEnv(source = process.env) {
     failures.push('STORAGE_DRIVER="local" is not persistent; production requires "r2"');
   }
   const r2 = {
-    accountId: source.R2_ACCOUNT_ID ?? '',
-    accessKeyId: source.R2_ACCESS_KEY_ID ?? '',
-    secretAccessKey: source.R2_SECRET_ACCESS_KEY ?? '',
-    bucket: source.R2_BUCKET ?? '',
-    publicBaseUrl: source.R2_PUBLIC_BASE_URL ?? '',
+    accountId: String(source.R2_ACCOUNT_ID ?? source.CLOUDFLARE_ACCOUNT_ID ?? '').trim(),
+    accessKeyId: String(source.R2_ACCESS_KEY_ID ?? source.R2_ACCESS_KEY ?? source.AWS_ACCESS_KEY_ID ?? '').trim(),
+    secretAccessKey: String(source.R2_SECRET_ACCESS_KEY ?? source.R2_SECRET_KEY ?? source.AWS_SECRET_ACCESS_KEY ?? '').trim(),
+    bucket: String(source.R2_BUCKET ?? source.R2_BUCKET_NAME ?? '').trim(),
+    publicBaseUrl: String(source.R2_PUBLIC_BASE_URL ?? source.R2_PUBLIC_URL ?? '').trim(),
   };
   if (resolvedStorageDriver === 'r2') {
     const missing = Object.entries({
