@@ -3,6 +3,7 @@ import { requireAdmin } from '../middleware/auth.js';
 import { createRateLimiter } from '../middleware/rateLimit.js';
 import { applyPhotoPatch } from '../../domain/photos.js';
 import { buildZip } from '../../util/zip.js';
+import { logger } from '../../util/logger.js';
 
 /**
  * Photo API (Phase 4 + Phase 2 enhancements).
@@ -179,6 +180,7 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
           const record = await uploadService.uploadPhoto({
             buffer: file.buffer,
             originalName: file.originalname,
+            mimeType: file.mimetype,
             metadata: {
               caption: req.body.caption,
               section: req.body.section,
@@ -191,6 +193,7 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
           });
           results.uploaded.push(withUrls(record));
         } catch (err) {
+          logger.warn(`Photo/video upload failed: filename="${file.originalname}" code=${err.code ?? 'ERROR'}: ${err.message}`);
           results.failed.push({ filename: file.originalname, code: err.code ?? 'UPLOAD_FAILED', message: err.message });
         }
       }

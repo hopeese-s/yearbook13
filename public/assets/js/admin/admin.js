@@ -221,14 +221,21 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
         } catch {
           // fall through
         }
-        if (xhr.status >= 200 && xhr.status < 300 && body?.uploaded) {
+        if (Array.isArray(body?.uploaded) && Array.isArray(body?.failed)) {
+          for (const photo of body.uploaded) mark(true, photo.filename);
+          for (const failure of body.failed) mark(false, failure.filename, failure.message || failure.code || 'Upload failed');
+          uploadedCount += body.uploaded.length;
+          failedCount += body.failed.length;
+          resolve(body.uploaded.length > 0);
+        } else if (xhr.status >= 200 && xhr.status < 300 && body?.uploaded) {
           for (const photo of body.uploaded) mark(true, photo.filename);
           for (const failure of body.failed ?? []) mark(false, failure.filename, failure.message);
           uploadedCount += body.uploaded.length;
           failedCount += (body.failed ?? []).length;
           resolve(true);
         } else {
-          for (const file of chunk) mark(false, file.name, body?.error?.message ?? `HTTP ${xhr.status}`);
+          const errMsg = body?.error?.message || body?.message || `HTTP ${xhr.status}`;
+          for (const file of chunk) mark(false, file.name, errMsg);
           failedCount += chunk.length;
           resolve(false);
         }

@@ -24,16 +24,39 @@ export async function createR2Storage(config, { s3Client } = {}) {
 
   const notFound = (err) => err?.$metadata?.httpStatusCode === 404 || err?.name === 'NotFound';
 
+  const mimeFromKey = (key = '') => {
+    const ext = key.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'mp4':
+      case 'm4v': return 'video/mp4';
+      case 'webm': return 'video/webm';
+      case 'mov': return 'video/quicktime';
+      case 'jpg':
+      case 'jpeg': return 'image/jpeg';
+      case 'png': return 'image/png';
+      case 'webp': return 'image/webp';
+      default: return undefined;
+    }
+  };
+
   const driver = {
     name: 'r2',
 
     async save(key, buffer) {
       const normalized = normalizeKey(key);
+      const contentType = mimeFromKey(normalized);
       try {
-        await client.send(new PutObjectCommand({ Bucket: bucket, Key: normalized, Body: buffer }));
+        await client.send(
+          new PutObjectCommand({
+            Bucket: bucket,
+            Key: normalized,
+            Body: buffer,
+            ...(contentType ? { ContentType: contentType } : {}),
+          }),
+        );
         return { key: normalized, size: buffer.length };
       } catch (err) {
-        throw new StorageError('WRITE_FAILED', `Failed to store "${normalized}" in R2`, err);
+        throw new StorageError('WRITE_FAILED', `Failed to store "${normalized}" in R2: ${err.message}`, err);
       }
     },
 

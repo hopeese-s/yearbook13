@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import sharp from 'sharp';
 import request from 'supertest';
 import { makeTestApp, testLoginRouter } from '../helpers.js';
-import { createUploadService } from '../../src/uploads/upload.service.js';
+import { createUploadService, isVideoContent, createVideoPoster } from '../../src/uploads/upload.service.js';
 
 async function makeJpeg(width = 600, height = 400) {
   return sharp({ create: { width, height, channels: 3, background: 'orange' } }).jpeg().toBuffer();
@@ -226,3 +226,35 @@ test('admin can upload a video file and retrieve it with correct MIME type and p
   assert.equal(thumbRes.status, 200);
   assert.ok(thumbRes.body.length > 0);
 });
+
+test('isVideoContent detects video by MIME, extension, and binary magic bytes', () => {
+  // MIME type detection
+  assert.equal(isVideoContent({ mimeType: 'video/mp4', originalName: 'blob' }), true);
+  assert.equal(isVideoContent({ mimeType: 'video/quicktime', originalName: 'movie' }), true);
+
+  // Extension detection
+  assert.equal(isVideoContent({ originalName: 'test.mp4' }), true);
+  assert.equal(isVideoContent({ originalName: 'video.m4v' }), true);
+  assert.equal(isVideoContent({ originalName: 'clip.MOV' }), true);
+  assert.equal(isVideoContent({ originalName: 'photo.jpg' }), false);
+
+  // MP4 ftyp magic bytes
+  const ftypBuffer = Buffer.alloc(16);
+  ftypBuffer.write('ftyp', 4, 'ascii');
+  assert.equal(isVideoContent({ buffer: ftypBuffer, originalName: 'no_extension' }), true);
+
+  // WebM magic bytes: 0x1A 0x45 0xDF 0xA3
+  const webmBuffer = Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x00, 0x00, 0x00, 0x00]);
+  assert.equal(isVideoContent({ buffer: webmBuffer, originalName: 'unnamed' }), true);
+});
+
+test('createVideoPoster handles Thai characters and special symbols', async () => {
+  const poster1 = await createVideoPoster('วิดีโอปัจฉิม_2569.mp4');
+  assert.ok(Buffer.isBuffer(poster1));
+  assert.ok(poster1.length > 0);
+
+  const poster2 = await createVideoPoster('video & clip "special" <test>.mov');
+  assert.ok(Buffer.isBuffer(poster2));
+  assert.ok(poster2.length > 0);
+});
+
