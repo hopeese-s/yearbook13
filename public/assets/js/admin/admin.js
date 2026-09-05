@@ -311,7 +311,8 @@ document.getElementById('drive-import-btn').addEventListener('click', async () =
       urlInput.value = '';
       await loadPhotos();
     } else {
-      results.append(el('li', { class: 'fail', text: `✗ ${body?.error?.message ?? `HTTP ${res.status}`}` }));
+      const errMsg = body?.error?.message || (body?.error?.code ? `${body.error.code} (HTTP ${res.status})` : `HTTP ${res.status}`);
+      results.append(el('li', { class: 'fail', text: `✗ ${errMsg}` }));
     }
   } catch {
     results.append(el('li', { class: 'fail', text: '✗ Network error during import.' }));

@@ -50,7 +50,9 @@ export function createErrorHandler(config) {
     if (config.isProd) logger.error(summary);
     else logger.error(summary, err?.stack ?? err?.message);
     const body = { error: { code } };
-    if (!config.isProd) body.error.message = err?.message ?? 'Unexpected error';
+    if (!config.isProd || resolvedStatus < 500) {
+      body.error.message = err?.message ?? 'Unexpected error';
+    }
     res.status(resolvedStatus).json(body);
   };
 }
