@@ -10,7 +10,7 @@ export function pagesRoutes(config) {
       index: 'index.html',
       maxAge: 0,
       setHeaders: (res, filePath) => {
-        if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
+        if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
           res.setHeader('Cache-Control', 'no-cache, must-revalidate');
         } else if (filePath.includes(`${path.sep}vendor${path.sep}`)) {
           res.setHeader('Cache-Control', 'public, max-age=86400');

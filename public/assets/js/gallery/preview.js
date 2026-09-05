@@ -184,7 +184,6 @@ export class PhotoPreview {
         });
         media.style.width = '100%';
         media.style.height = '100%';
-        media.style.minHeight = '380px';
         media.style.border = 'none';
         media.style.borderRadius = 'var(--r-sm)';
         media.style.background = '#000';
