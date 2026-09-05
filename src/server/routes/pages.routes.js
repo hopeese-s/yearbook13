@@ -8,11 +8,14 @@ export function pagesRoutes(config) {
   router.use(
     express.static(paths.public, {
       index: 'index.html',
-      maxAge: config.isProd ? '1h' : 0,
+      maxAge: 0,
       setHeaders: (res, filePath) => {
-        // Vendored modules are effectively immutable per deploy.
-        if (filePath.includes(`${path.sep}vendor${path.sep}`)) {
+        if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
+          res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+        } else if (filePath.includes(`${path.sep}vendor${path.sep}`)) {
           res.setHeader('Cache-Control', 'public, max-age=86400');
+        } else if (config.isProd) {
+          res.setHeader('Cache-Control', 'public, max-age=3600');
         }
       },
     }),
