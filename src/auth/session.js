@@ -25,6 +25,7 @@ export async function sessionMiddleware(config, { fileStoreDir } = {}) {
     resave: false,
     saveUninitialized: false,
     rolling: true,
+    proxy: Boolean(config.isProd),
     cookie: {
       httpOnly: true,
       sameSite: 'lax',

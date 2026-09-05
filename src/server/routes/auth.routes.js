@@ -47,6 +47,8 @@ export function authRoutes(config, passportInstance, oauthEnabled) {
 
   router.get('/auth/google', limiter, (req, res, next) => {
     if (!oauthEnabled) return res.status(503).json(oauthNotConfigured(config));
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
     req.session.returnTo = safeReturnTo(req.query.returnTo);
     passportInstance.authenticate('google', { scope: AUTH_SCOPES, callbackURL: resolveCallbackUrl(config, req) })(
       req,
@@ -57,6 +59,8 @@ export function authRoutes(config, passportInstance, oauthEnabled) {
 
   router.get('/auth/google/callback', limiter, (req, res, next) => {
     if (!oauthEnabled) return res.status(503).json(oauthNotConfigured(config));
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
     passportInstance.authenticate(
       'google',
       { callbackURL: resolveCallbackUrl(config, req) },

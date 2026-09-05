@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import { makeTestApp, makeTestConfig, testLoginRouter } from '../helpers.js';
-import { applyRole, mapGoogleProfile } from '../../src/auth/passport.js';
+import { applyRole, mapGoogleProfile, ResilientSessionStore } from '../../src/auth/passport.js';
 import { resolveCallbackUrl } from '../../src/server/routes/auth.routes.js';
 
 const OAUTH_CREDS = {
@@ -167,4 +167,45 @@ test('GET /auth/me returns 200 with user when authenticated and 401 when anonymo
   assert.equal(authRes.status, 200);
   assert.equal(authRes.body.user.email, 'admin@example.com');
 });
+
+test('ResilientSessionStore maintains ring of multiple valid states and prevents replay', () => {
+  const store = new ResilientSessionStore({ maxStates: 3 });
+  const req = { session: {} };
+
+  let state1, state2, state3, state4;
+  store.store(req, (_err, s) => { state1 = s; });
+  store.store(req, (_err, s) => { state2 = s; });
+  store.store(req, (_err, s) => { state3 = s; });
+
+  assert.ok(state1 && state2 && state3);
+  assert.notEqual(state1, state2);
+  assert.notEqual(state2, state3);
+
+  // Verify state 1 first: should pass
+  let verified1 = false;
+  store.verify(req, state1, (_err, ok) => { verified1 = ok; });
+  assert.equal(verified1, true);
+
+  // Replay of state 1: must fail
+  let replayed = false;
+  store.verify(req, state1, (_err, ok) => { replayed = ok; });
+  assert.equal(replayed, false);
+
+  // State 2: still valid
+  let verified2 = false;
+  store.verify(req, state2, (_err, ok) => { verified2 = ok; });
+  assert.equal(verified2, true);
+
+  // Storing state 4 should work and cap ring
+  store.store(req, (_err, s) => { state4 = s; });
+  let verified4 = false;
+  store.verify(req, state4, (_err, ok) => { verified4 = ok; });
+  assert.equal(verified4, true);
+
+  // Unknown state: fails
+  let unknown = false;
+  store.verify(req, 'completely-fake-state', (_err, ok) => { unknown = ok; });
+  assert.equal(unknown, false);
+});
+
 
