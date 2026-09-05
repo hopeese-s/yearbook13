@@ -122,6 +122,18 @@ export function createJsonRepository({ file }) {
       return true;
     },
 
+    async deletePhotos(ids) {
+      if (!Array.isArray(ids) || ids.length === 0) return 0;
+      const idSet = new Set(ids);
+      const records = await readAll();
+      const next = records.filter((r) => !idSet.has(r.id));
+      const deletedCount = records.length - next.length;
+      if (deletedCount > 0) {
+        await writeAll(next);
+      }
+      return deletedCount;
+    },
+
     async countPhotos() {
       return (await readAll()).length;
     },

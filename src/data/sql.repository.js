@@ -101,6 +101,12 @@ export async function createSqlRepository(config, { pool } = {}) {
       return rowCount > 0;
     },
 
+    async deletePhotos(ids) {
+      if (!Array.isArray(ids) || ids.length === 0) return 0;
+      const { rowCount } = await db.query('DELETE FROM photos WHERE id = ANY($1)', [ids]);
+      return rowCount;
+    },
+
     async countPhotos() {
       const { rows } = await db.query('SELECT count(*)::int AS count FROM photos');
       return rows[0].count;

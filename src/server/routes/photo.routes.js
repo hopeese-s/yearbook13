@@ -14,6 +14,7 @@ import { logger } from '../../util/logger.js';
  *   GET    /api/photos/export/zip admin backup ZIP download
  *   POST   /api/photos            admin upload (multipart, rate limited)
  *   POST   /api/photos/bulk       admin bulk metadata patch
+ *   POST   /api/photos/bulk-delete admin bulk delete
  *   PATCH  /api/photos/:id        admin metadata edit
  *   DELETE /api/photos/:id        admin delete (record + stored objects)
  */
@@ -100,6 +101,24 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
         if (saved) updated.push(withUrls(saved));
       }
       res.json({ updated, failed });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/api/photos/bulk-delete', requireAdmin, async (req, res, next) => {
+    try {
+      const { ids = [] } = req.body ?? {};
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: { code: 'INVALID_REQUEST', message: 'Attach an array of photo ids' } });
+      }
+      const records = [];
+      for (const id of ids) {
+        const record = await repository.getPhoto(id);
+        if (record) records.push(record);
+      }
+      const result = await uploadService.deletePhotos(records);
+      res.json({ ok: true, ...result });
     } catch (err) {
       next(err);
     }

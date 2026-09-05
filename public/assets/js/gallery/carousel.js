@@ -1,12 +1,22 @@
 import { el } from '../ui/dom.js';
 
-/** Coverflow carousel with prev/next navigation and click-to-open. */
+/** Coverflow carousel with prev/next navigation, smooth drag, wheel, and click-to-open. */
 export function createCarousel(root, photos, { onOpen } = {}) {
   root.hidden = false;
   root.replaceChildren();
 
+  if (!Array.isArray(photos) || photos.length === 0) {
+    return {
+      destroy() {
+        root.replaceChildren();
+        root.hidden = true;
+      },
+    };
+  }
+
   let index = 0;
   const track = el('div', { class: 'carousel-track' });
+  let isPointerDown = false;
   let isDragging = false;
   let startX = 0;
   let startY = 0;
@@ -14,25 +24,39 @@ export function createCarousel(root, photos, { onOpen } = {}) {
 
   const cards = photos.map((photo, photoIndex) => {
     const isVideo = photo.mediaType === 'video' || /\.(mp4|webm|mov)$/i.test(photo.filename ?? '');
+    const imgEl = el('img', {
+      src: photo.thumbUrl,
+      alt: photo.caption || 'Yearbook photo',
+      loading: 'lazy',
+      draggable: 'false',
+    });
     const card = el(
       'figure',
       {
         class: 'photo-card',
         tabindex: '0',
         role: 'button',
-        'aria-label': photo.caption || 'Photo',
+        'aria-label': photo.caption || photo.filename || 'Photo',
+        draggable: 'false',
       },
-      el('img', { src: photo.thumbUrl, alt: photo.caption || 'Yearbook photo', loading: 'lazy' }),
+      imgEl,
       isVideo ? el('span', { class: 'video-badge', text: '▶ Video' }) : null,
     );
-    card.addEventListener('click', () => {
-      if (isDragging) return;
-      if (photoIndex === index) onOpen?.(photo);
-      else {
+
+    card.addEventListener('click', (event) => {
+      if (isDragging) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      if (photoIndex === index) {
+        onOpen?.(photo);
+      } else {
         index = photoIndex;
         render();
       }
     });
+
     card.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
@@ -43,69 +67,12 @@ export function createCarousel(root, photos, { onOpen } = {}) {
         }
       }
     });
+
     track.append(card);
     return card;
   });
 
-  function render(offsetExtra = 0) {
-    const firstCard = cards[0];
-    if (!firstCard) return;
-    const style = window.getComputedStyle(track);
-    const gap = parseFloat(style.columnGap || style.gap) || (window.innerWidth <= 720 ? 12 : 24);
-    const measuredWidth = firstCard.offsetWidth || Math.min(250, (root.clientWidth || 360) * 0.72);
-    const cardWidth = measuredWidth + gap;
-    const baseOffset = ((root.clientWidth || 360) - measuredWidth) / 2 - index * cardWidth;
-    track.style.transform = `translateX(${baseOffset + offsetExtra}px)`;
-    for (const [cardIndex, card] of cards.entries()) {
-      card.classList.toggle('is-active', cardIndex === index);
-    }
-  }
-
   const carouselEl = el('div', { class: 'carousel' }, track);
-
-  const onTouchStart = (event) => {
-    if (event.touches.length !== 1 || photos.length <= 1) return;
-    startX = event.touches[0].clientX;
-    startY = event.touches[0].clientY;
-    isDragging = false;
-    currentDeltaX = 0;
-    track.style.transition = 'none';
-  };
-
-  const onTouchMove = (event) => {
-    if (event.touches.length !== 1 || photos.length <= 1) return;
-    const dx = event.touches[0].clientX - startX;
-    const dy = event.touches[0].clientY - startY;
-
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
-      isDragging = true;
-      currentDeltaX = dx;
-      render(currentDeltaX * 0.75);
-    }
-  };
-
-  const onTouchEnd = () => {
-    track.style.transition = '';
-    if (isDragging) {
-      if (currentDeltaX < -36 && photos.length > 1) {
-        index = (index + 1) % photos.length;
-      } else if (currentDeltaX > 36 && photos.length > 1) {
-        index = (index - 1 + photos.length) % photos.length;
-      }
-      render();
-      setTimeout(() => {
-        isDragging = false;
-      }, 50);
-    } else {
-      render();
-    }
-    currentDeltaX = 0;
-  };
-
-  carouselEl.addEventListener('touchstart', onTouchStart, { passive: true });
-  carouselEl.addEventListener('touchmove', onTouchMove, { passive: true });
-  carouselEl.addEventListener('touchend', onTouchEnd, { passive: true });
-  carouselEl.addEventListener('touchcancel', onTouchEnd, { passive: true });
 
   const prevBtn = el('button', {
     class: 'btn',
@@ -113,24 +80,138 @@ export function createCarousel(root, photos, { onOpen } = {}) {
     text: '‹',
     'aria-label': 'Previous',
     onclick: () => {
-      index = (index - 1 + photos.length) % photos.length;
-      render();
+      if (index > 0) {
+        index--;
+        render();
+      }
     },
   });
+
   const nextBtn = el('button', {
     class: 'btn',
     type: 'button',
     text: '›',
     'aria-label': 'Next',
     onclick: () => {
-      index = (index + 1) % photos.length;
-      render();
+      if (index < photos.length - 1) {
+        index++;
+        render();
+      }
     },
   });
+
   const nav = el('div', { class: 'carousel-nav' }, prevBtn, nextBtn);
   if (photos.length <= 1) {
     nav.style.display = 'none';
   }
+
+  function render(offsetExtra = 0) {
+    if (cards.length === 0) return;
+    index = Math.max(0, Math.min(cards.length - 1, index));
+    const activeCard = cards[index];
+    if (!activeCard) return;
+
+    // Use activeCard's exact DOM offset and width for pixel-perfect centering
+    const containerWidth = carouselEl.clientWidth || root.clientWidth || window.innerWidth;
+    const cardCenter = activeCard.offsetLeft + activeCard.offsetWidth / 2;
+    const baseOffset = containerWidth / 2 - cardCenter;
+
+    track.style.transform = `translateX(${baseOffset + offsetExtra}px)`;
+
+    for (const [cardIndex, card] of cards.entries()) {
+      card.classList.toggle('is-active', cardIndex === index);
+    }
+
+    prevBtn.disabled = index === 0;
+    nextBtn.disabled = index === cards.length - 1;
+  }
+
+  // --- Unified Pointer Drag (Touch + Mouse) ---
+  const onPointerDown = (event) => {
+    if (photos.length <= 1) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    isPointerDown = true;
+    isDragging = false;
+    startX = event.clientX;
+    startY = event.clientY;
+    currentDeltaX = 0;
+    track.style.transition = 'none';
+    try {
+      carouselEl.setPointerCapture(event.pointerId);
+    } catch {
+      // fallback
+    }
+  };
+
+  const onPointerMove = (event) => {
+    if (!isPointerDown) return;
+    const dx = event.clientX - startX;
+    const dy = event.clientY - startY;
+
+    if (!isDragging && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 6) {
+      isDragging = true;
+    }
+
+    if (isDragging) {
+      currentDeltaX = dx;
+      // Gentle rubber-band resistance when pulling beyond bounds
+      let damping = 1;
+      if ((index === 0 && dx > 0) || (index === photos.length - 1 && dx < 0)) {
+        damping = 0.28;
+      }
+      render(currentDeltaX * damping);
+    }
+  };
+
+  const onPointerUp = () => {
+    if (!isPointerDown) return;
+    isPointerDown = false;
+
+    track.style.transition = '';
+    if (isDragging) {
+      if (currentDeltaX < -38 && index < photos.length - 1) {
+        index++;
+      } else if (currentDeltaX > 38 && index > 0) {
+        index--;
+      }
+      render();
+      setTimeout(() => {
+        isDragging = false;
+      }, 80);
+    } else {
+      render();
+    }
+    currentDeltaX = 0;
+  };
+
+  carouselEl.addEventListener('pointerdown', onPointerDown);
+  carouselEl.addEventListener('pointermove', onPointerMove);
+  carouselEl.addEventListener('pointerup', onPointerUp);
+  carouselEl.addEventListener('pointercancel', onPointerUp);
+
+  // --- Horizontal Wheel / Trackpad Scroll ---
+  let wheelTimeout = null;
+  const onWheel = (event) => {
+    if (photos.length <= 1) return;
+    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.shiftKey ? event.deltaY : 0;
+    if (Math.abs(delta) < 20) return;
+    event.preventDefault();
+
+    if (wheelTimeout) return;
+    wheelTimeout = setTimeout(() => {
+      wheelTimeout = null;
+    }, 240);
+
+    if (delta > 0 && index < photos.length - 1) {
+      index++;
+      render();
+    } else if (delta < 0 && index > 0) {
+      index--;
+      render();
+    }
+  };
+  carouselEl.addEventListener('wheel', onWheel, { passive: false });
 
   root.append(carouselEl, nav);
   requestAnimationFrame(() => render());
@@ -141,11 +222,15 @@ export function createCarousel(root, photos, { onOpen } = {}) {
   const onKeydown = (event) => {
     if (root.hidden) return;
     if (event.key === 'ArrowLeft') {
-      index = (index - 1 + photos.length) % photos.length;
-      render();
+      if (index > 0) {
+        index--;
+        render();
+      }
     } else if (event.key === 'ArrowRight') {
-      index = (index + 1) % photos.length;
-      render();
+      if (index < photos.length - 1) {
+        index++;
+        render();
+      }
     }
   };
   window.addEventListener('keydown', onKeydown);
@@ -154,10 +239,11 @@ export function createCarousel(root, photos, { onOpen } = {}) {
     destroy() {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('keydown', onKeydown);
-      carouselEl.removeEventListener('touchstart', onTouchStart);
-      carouselEl.removeEventListener('touchmove', onTouchMove);
-      carouselEl.removeEventListener('touchend', onTouchEnd);
-      carouselEl.removeEventListener('touchcancel', onTouchEnd);
+      carouselEl.removeEventListener('pointerdown', onPointerDown);
+      carouselEl.removeEventListener('pointermove', onPointerMove);
+      carouselEl.removeEventListener('pointerup', onPointerUp);
+      carouselEl.removeEventListener('pointercancel', onPointerUp);
+      carouselEl.removeEventListener('wheel', onWheel);
       root.replaceChildren();
       root.hidden = true;
     },

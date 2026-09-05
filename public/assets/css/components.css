@@ -583,6 +583,12 @@
   display: flex;
   align-items: center;
   touch-action: pan-y;
+  user-select: none;
+  cursor: grab;
+}
+
+.carousel:active {
+  cursor: grabbing;
 }
 
 .carousel-track {
@@ -592,6 +598,7 @@
   transition: transform var(--t-slow) var(--ease-out);
   will-change: transform;
   touch-action: pan-y;
+  user-select: none;
 }
 
 .carousel .photo-card {
@@ -603,6 +610,8 @@
   transform-style: preserve-3d;
   transition: transform var(--t-slow) var(--ease-out), filter var(--t-slow) var(--ease-out), box-shadow var(--t-slow) var(--ease-out);
   cursor: pointer;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .carousel .photo-card img,
@@ -610,6 +619,9 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
 }
 
 .carousel .photo-card.is-active {
@@ -640,6 +652,12 @@
   border-radius: 50%;
   font-size: 1.2rem;
   padding: 0;
+}
+
+.carousel-nav .btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* --- Mac window (lightbox / preview chrome) --- */

@@ -204,7 +204,7 @@ async function boot() {
 
     // Register Service Worker for PWA support
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js?v=20260905v4').catch(() => {});
+      navigator.serviceWorker.register('/sw.js?v=20260905v5').catch(() => {});
     }
   } catch (err) {
     renderState(statePanel, { kind: 'error', detail: err.message });

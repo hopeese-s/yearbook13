@@ -220,5 +220,29 @@ export function createUploadService({ storage, repository }) {
     });
   }
 
-  return { uploadPhoto, createExternalMediaRecord, deletePhoto };
+  async function deletePhotos(records) {
+    if (!Array.isArray(records) || records.length === 0) {
+      return { deleted: [], count: 0 };
+    }
+    const ids = records.map((r) => r.id);
+    if (typeof repository.deletePhotos === 'function') {
+      await repository.deletePhotos(ids);
+    } else {
+      for (const id of ids) {
+        await repository.deletePhoto(id);
+      }
+    }
+
+    const allKeys = records.flatMap((record) => [record.storageKey, record.thumbKey]).filter(Boolean);
+    const results = await Promise.allSettled(allKeys.map((key) => storage.delete(key)));
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        logger.warn(`ORPHANED_OBJECT key="${allKeys[index]}": ${result.reason?.message ?? 'delete failed'}`);
+      }
+    });
+
+    return { deleted: ids, count: ids.length };
+  }
+
+  return { uploadPhoto, createExternalMediaRecord, deletePhoto, deletePhotos };
 }

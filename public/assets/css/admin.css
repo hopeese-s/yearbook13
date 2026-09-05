@@ -230,19 +230,34 @@
   transform: scale(0.98);
 }
 
-.grid-item.selected::after {
-  content: '✓';
+.grid-item .item-check {
   position: absolute;
   top: 6px;
   right: 6px;
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--accent);
+  border: 1.5px solid rgba(255, 255, 255, 0.65);
+  background: rgba(0, 0, 0, 0.45);
   color: #fff;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
   display: grid;
   place-items: center;
+  z-index: 2;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out);
+}
+
+.grid-item:hover .item-check {
+  border-color: #fff;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.grid-item.selected .item-check {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
 }
 
 .grid-item .item-caption {

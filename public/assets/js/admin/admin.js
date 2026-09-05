@@ -326,22 +326,35 @@ const marquee = document.getElementById('marquee');
 const selectionCount = document.getElementById('selection-count');
 const deleteBtn = document.getElementById('delete-selected');
 const bulkEditBtn = document.getElementById('bulk-edit-btn');
+const selectAllBtn = document.getElementById('select-all');
 const manageState = document.getElementById('manage-state');
 let photos = [];
 const selected = new Set();
+let lastSelectedIndex = -1;
 
 function renderSelection() {
   selectionCount.textContent = `${selected.size} selected`;
   deleteBtn.disabled = selected.size === 0;
   if (bulkEditBtn) bulkEditBtn.disabled = selected.size === 0;
+  if (selectAllBtn) {
+    if (photos.length > 0 && selected.size === photos.length) {
+      selectAllBtn.textContent = 'Deselect all';
+    } else {
+      selectAllBtn.textContent = 'Select all';
+    }
+  }
   for (const node of grid.querySelectorAll('.grid-item')) {
-    node.classList.toggle('selected', selected.has(node.dataset.id));
+    const isSelected = selected.has(node.dataset.id);
+    node.classList.toggle('selected', isSelected);
+    node.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+    const check = node.querySelector('.item-check');
+    if (check) check.textContent = isSelected ? '✓' : '';
   }
 }
 
 function renderGrid() {
   for (const node of [...grid.querySelectorAll('.grid-item')]) node.remove();
-  for (const photo of photos) {
+  for (const [photoIndex, photo] of photos.entries()) {
     const item = el(
       'div',
       {
@@ -350,29 +363,53 @@ function renderGrid() {
         role: 'checkbox',
         'aria-checked': 'false',
         tabindex: '0',
-        'aria-label': photo.caption || 'Photo',
+        'aria-label': photo.caption || photo.filename || 'Photo',
       },
+      el('span', { class: 'item-check', role: 'checkbox', 'aria-label': 'Select item' }),
       el('img', { src: photo.thumbUrl, alt: photo.caption || 'Yearbook photo', loading: 'lazy' }),
       el('span', { class: 'item-caption', text: photo.caption || photo.filename }),
     );
+
     item.addEventListener('click', (event) => {
-      if (event.ctrlKey || event.metaKey) {
-        if (selected.has(photo.id)) selected.delete(photo.id);
-        else selected.add(photo.id);
+      const isCheckClicked = Boolean(event.target.closest('.item-check'));
+
+      if (event.shiftKey && lastSelectedIndex >= 0) {
+        // Shift+Click: range selection from last clicked to current
+        const start = Math.min(lastSelectedIndex, photoIndex);
+        const end = Math.max(lastSelectedIndex, photoIndex);
+        for (let i = start; i <= end; i++) {
+          if (photos[i]) selected.add(photos[i].id);
+        }
+      } else if (event.ctrlKey || event.metaKey || isCheckClicked) {
+        // Toggle single selection
+        if (selected.has(photo.id)) {
+          selected.delete(photo.id);
+        } else {
+          selected.add(photo.id);
+          lastSelectedIndex = photoIndex;
+        }
       } else {
+        // Single selection
         selected.clear();
         selected.add(photo.id);
+        lastSelectedIndex = photoIndex;
       }
       renderSelection();
     });
+
     item.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
-        if (selected.has(photo.id)) selected.delete(photo.id);
-        else selected.add(photo.id);
+        if (selected.has(photo.id)) {
+          selected.delete(photo.id);
+        } else {
+          selected.add(photo.id);
+          lastSelectedIndex = photoIndex;
+        }
         renderSelection();
       }
     });
+
     grid.append(item);
   }
   renderSelection();
@@ -421,31 +458,47 @@ const endMarquee = () => {
 grid.addEventListener('pointerup', endMarquee);
 grid.addEventListener('pointerleave', endMarquee);
 
-document.getElementById('select-all').addEventListener('click', () => {
-  selected.clear();
-  for (const photo of photos) selected.add(photo.id);
+selectAllBtn?.addEventListener('click', () => {
+  if (photos.length > 0 && selected.size === photos.length) {
+    selected.clear();
+    lastSelectedIndex = -1;
+  } else {
+    selected.clear();
+    for (const photo of photos) selected.add(photo.id);
+    lastSelectedIndex = 0;
+  }
   renderSelection();
 });
 
 deleteBtn.addEventListener('click', async () => {
   if (selected.size === 0) return;
-  if (!window.confirm(`Delete ${selected.size} photo(s)? This cannot be undone.`)) return;
+  const count = selected.size;
+  if (!window.confirm(`Delete ${count} photo(s)? This cannot be undone.`)) return;
+
   deleteBtn.disabled = true;
-  let failures = 0;
-  for (const id of [...selected]) {
-    try {
-      const res = await fetch(`/api/photos/${encodeURIComponent(id)}`, { method: 'DELETE' });
-      if (!res.ok) {
-        failures += 1;
-        continue; // keep selected so the user can retry
-      }
-      selected.delete(id);
-    } catch {
-      failures += 1;
+  const originalText = deleteBtn.textContent;
+  deleteBtn.textContent = `Deleting (${count})…`;
+
+  try {
+    const res = await fetch('/api/photos/bulk-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [...selected] }),
+    });
+    if (res.ok) {
+      selected.clear();
+      lastSelectedIndex = -1;
+      await loadPhotos();
+    } else {
+      const body = await res.json().catch(() => null);
+      window.alert(`Delete failed: ${body?.error?.message ?? res.status}`);
     }
+  } catch (err) {
+    window.alert(`Network error during deletion: ${err.message}`);
+  } finally {
+    deleteBtn.disabled = selected.size === 0;
+    deleteBtn.textContent = originalText;
   }
-  await loadPhotos();
-  if (failures > 0) window.alert(`${failures} photo(s) could not be deleted. Try again.`);
 });
 
 if (bulkEditBtn) {
