@@ -1,5 +1,6 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import { createRateLimiter } from '../middleware/rateLimit.js';
+import { logger } from '../../util/logger.js';
 
 // AUTH ONLY scopes. Google Drive permissions must NEVER be added here;
 // a Drive import flow would use its own separate authorization route
@@ -35,8 +36,8 @@ function safeReturnTo(value) {
 export function resolveCallbackUrl(config, req) {
   const configured = (config.auth.google.callbackUrl ?? '').trim();
   if (configured) return configured;
-  const proto = req.protocol; // trust proxy is already configured for Railway
-  const host = req.get('host');
+  const proto = req.headers?.['x-forwarded-proto'] || req.protocol || 'https';
+  const host = req.headers?.['x-forwarded-host'] || req.get?.('host') || req.headers?.host || 'localhost';
   return `${proto}://${host}/auth/google/callback`;
 }
 
@@ -59,9 +60,18 @@ export function authRoutes(config, passportInstance, oauthEnabled) {
     passportInstance.authenticate(
       'google',
       { callbackURL: resolveCallbackUrl(config, req) },
-      (err, user) => {
-        if (err) return next(err);
-        if (!user) return res.redirect('/auth/failure');
+      (err, user, info) => {
+        if (err) {
+          logger.error(`[Auth] Google OAuth error: ${err.message}`, err);
+          if (req.session) req.session.authError = err.message;
+          return res.redirect('/auth/failure');
+        }
+        if (!user) {
+          const reason = info?.message || 'Google sign-in failed or was cancelled';
+          logger.warn(`[Auth] Google sign-in failed: ${reason}`);
+          if (req.session) req.session.authError = reason;
+          return res.redirect('/auth/failure');
+        }
         const returnTo = safeReturnTo(req.session?.returnTo);
         // Session fixation mitigation: regenerate after the OAuth exchange,
         // then re-establish the login on the fresh session.
@@ -76,8 +86,17 @@ export function authRoutes(config, passportInstance, oauthEnabled) {
     )(req, res, next);
   });
 
-  router.get('/auth/failure', (_req, res) => {
-    res.status(401).json({ error: { code: 'AUTH_FAILED', message: 'Google sign-in failed or was cancelled' } });
+  router.get('/auth/failure', (req, res) => {
+    const reason = req.session?.authError || req.query.reason || 'Google sign-in failed or was cancelled';
+    if (req.session?.authError) delete req.session.authError;
+    res.status(401).json({
+      error: {
+        code: 'AUTH_FAILED',
+        message: String(reason),
+        guidance:
+          'Custom domain check: 1) Add https://<your-domain>/auth/google/callback to "Authorized redirect URIs" in Google Cloud Console. 2) If GOOGLE_CALLBACK_URL is set on Railway, update or remove it so it auto-detects your custom domain. Check /auth/google/diag to view the callback URI in use.',
+      },
+    });
   });
 
   // POST /auth/logout â€” XHR / fetch path; returns JSON {ok:true}.

@@ -17,8 +17,8 @@ import helmet from 'helmet';
  */
 export function applySecurity(app, config) {
   app.disable('x-powered-by');
-  // Railway terminates TLS in front of the app; trust the first proxy hop.
-  app.set('trust proxy', config.isProd ? 1 : false);
+  // Trust reverse proxy chain (Railway, Cloudflare, custom domain CDN) for TLS and host headers.
+  app.set('trust proxy', Boolean(config.isProd));
 
   app.use(
     helmet({
