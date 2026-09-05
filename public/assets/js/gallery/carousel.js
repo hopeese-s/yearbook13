@@ -7,6 +7,10 @@ export function createCarousel(root, photos, { onOpen } = {}) {
 
   let index = 0;
   const track = el('div', { class: 'carousel-track' });
+  let isDragging = false;
+  let startX = 0;
+  let startY = 0;
+  let currentDeltaX = 0;
 
   const cards = photos.map((photo, photoIndex) => {
     const isVideo = photo.mediaType === 'video' || /\.(mp4|webm|mov)$/i.test(photo.filename ?? '');
@@ -22,6 +26,7 @@ export function createCarousel(root, photos, { onOpen } = {}) {
       isVideo ? el('span', { class: 'video-badge', text: '▶ Video' }) : null,
     );
     card.addEventListener('click', () => {
+      if (isDragging) return;
       if (photoIndex === index) onOpen?.(photo);
       else {
         index = photoIndex;
@@ -42,21 +47,86 @@ export function createCarousel(root, photos, { onOpen } = {}) {
     return card;
   });
 
-  function render() {
+  function render(offsetExtra = 0) {
     const firstCard = cards[0];
-    const cardWidth = (firstCard?.offsetWidth || 440) + 24; // measured width + gap
-    const offset = (root.clientWidth - (firstCard?.offsetWidth || 440)) / 2 - index * cardWidth;
-    track.style.transform = `translateX(${offset}px)`;
+    const measuredWidth = firstCard?.offsetWidth || Math.min(280, (root.clientWidth || 360) * 0.75);
+    const cardWidth = measuredWidth + 16;
+    const baseOffset = ((root.clientWidth || 360) - measuredWidth) / 2 - index * cardWidth;
+    track.style.transform = `translateX(${baseOffset + offsetExtra}px)`;
     for (const [cardIndex, card] of cards.entries()) {
       card.classList.toggle('is-active', cardIndex === index);
     }
   }
 
-  const prevBtn = el('button', { class: 'btn', type: 'button', text: '‹', 'aria-label': 'Previous', onclick: () => { index = (index - 1 + photos.length) % photos.length; render(); } });
-  const nextBtn = el('button', { class: 'btn', type: 'button', text: '›', 'aria-label': 'Next', onclick: () => { index = (index + 1) % photos.length; render(); } });
+  const carouselEl = el('div', { class: 'carousel' }, track);
+
+  const onTouchStart = (event) => {
+    if (event.touches.length !== 1) return;
+    startX = event.touches[0].clientX;
+    startY = event.touches[0].clientY;
+    isDragging = false;
+    currentDeltaX = 0;
+    track.style.transition = 'none';
+  };
+
+  const onTouchMove = (event) => {
+    if (event.touches.length !== 1) return;
+    const dx = event.touches[0].clientX - startX;
+    const dy = event.touches[0].clientY - startY;
+
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
+      isDragging = true;
+      currentDeltaX = dx;
+      render(currentDeltaX * 0.75);
+    }
+  };
+
+  const onTouchEnd = () => {
+    track.style.transition = '';
+    if (isDragging) {
+      if (currentDeltaX < -36 && photos.length > 1) {
+        index = (index + 1) % photos.length;
+      } else if (currentDeltaX > 36 && photos.length > 1) {
+        index = (index - 1 + photos.length) % photos.length;
+      }
+      render();
+      setTimeout(() => {
+        isDragging = false;
+      }, 50);
+    } else {
+      render();
+    }
+    currentDeltaX = 0;
+  };
+
+  carouselEl.addEventListener('touchstart', onTouchStart, { passive: true });
+  carouselEl.addEventListener('touchmove', onTouchMove, { passive: true });
+  carouselEl.addEventListener('touchend', onTouchEnd, { passive: true });
+  carouselEl.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
+  const prevBtn = el('button', {
+    class: 'btn',
+    type: 'button',
+    text: '‹',
+    'aria-label': 'Previous',
+    onclick: () => {
+      index = (index - 1 + photos.length) % photos.length;
+      render();
+    },
+  });
+  const nextBtn = el('button', {
+    class: 'btn',
+    type: 'button',
+    text: '›',
+    'aria-label': 'Next',
+    onclick: () => {
+      index = (index + 1) % photos.length;
+      render();
+    },
+  });
   const nav = el('div', { class: 'carousel-nav' }, prevBtn, nextBtn);
 
-  root.append(el('div', { class: 'carousel' }, track), nav);
+  root.append(carouselEl, nav);
   requestAnimationFrame(() => render());
 
   const onResize = () => render();
@@ -78,6 +148,10 @@ export function createCarousel(root, photos, { onOpen } = {}) {
     destroy() {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('keydown', onKeydown);
+      carouselEl.removeEventListener('touchstart', onTouchStart);
+      carouselEl.removeEventListener('touchmove', onTouchMove);
+      carouselEl.removeEventListener('touchend', onTouchEnd);
+      carouselEl.removeEventListener('touchcancel', onTouchEnd);
       root.replaceChildren();
       root.hidden = true;
     },
