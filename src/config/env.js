@@ -138,7 +138,7 @@ export function loadEnv(source = process.env) {
   }
   const uploadDir = source.UPLOAD_DIR ?? 'uploads';
   const dataDir = source.DATA_DIR ?? 'data';
-  const maxUploadBytes = requireInt(source, 'MAX_UPLOAD_BYTES', failures, { min: 1024 }) ?? 52_428_800;
+  const maxUploadBytes = requireInt(source, 'MAX_UPLOAD_BYTES', failures, { min: 1024 }) ?? 209_715_200;
   const maxUploadsPerRequest = requireInt(source, 'MAX_UPLOADS_PER_REQUEST', failures, { min: 1 }) ?? 60;
 
   // --- Metadata database ---

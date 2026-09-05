@@ -73,9 +73,16 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
     if (!res.ok) {
       const body = await res.json().catch(() => null);
       const raw = body?.error?.message ?? `Google Drive API error (${res.status})`;
-      // 403/404 on Drive almost always means "the server can't see this item"
-      // — a sharing problem, not a bug. Say so plainly.
-      const message = res.status === 404 || res.status === 403 ? `${raw} — ${sharingHint()}` : raw;
+      // Check if this is a virus scan / large file warning rather than a permission issue
+      const isVirusWarning = /cannotdownloadfile|virus|too large/i.test(raw);
+      let message;
+      if (isVirusWarning) {
+        message = raw;
+      } else if (res.status === 404 || res.status === 403) {
+        message = `${raw} — ${sharingHint()}`;
+      } else {
+        message = raw;
+      }
       throw new DriveImportError('DRIVE_API_ERROR', message, res.status === 403 || res.status === 404 ? 422 : 502);
     }
     return res;
@@ -89,6 +96,8 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
         q: `'${folderId}' in parents and trashed=false`,
         fields: 'files(id,name,mimeType,size),nextPageToken',
         pageSize: '200',
+        supportsAllDrives: 'true',
+        includeItemsFromAllDrives: 'true',
       });
       if (pageToken) params.set('pageToken', pageToken);
       const res = await driveFetch(`/files?${params.toString()}`);
@@ -100,12 +109,14 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
   }
 
   async function fileMetadata(fileId) {
-    const res = await driveFetch(`/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size`);
+    const res = await driveFetch(`/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size&supportsAllDrives=true`);
     return res.json();
   }
 
   async function downloadFile(fileId) {
-    const res = await driveFetch(`/files/${encodeURIComponent(fileId)}?alt=media`);
+    const res = await driveFetch(
+      `/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true&acknowledgeAbuse=true`,
+    );
     return Buffer.from(await res.arrayBuffer());
   }
 
@@ -135,17 +146,27 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
       entries = [await fileMetadata(link.id)];
     }
 
-    const mediaFiles = entries
-      .filter(
-        (file) =>
-          typeof file.mimeType === 'string' &&
-          (file.mimeType.startsWith(IMAGE_MIME_PREFIX) || file.mimeType.startsWith(VIDEO_MIME_PREFIX)) &&
-          !file.mimeType.startsWith(GOOGLE_APP_MIME_PREFIX),
-      )
-      .filter((file) => Number(file.size ?? 0) <= config.storage.maxUploadBytes)
-      .slice(0, MAX_FILES_PER_IMPORT);
+    const allCandidates = entries.filter(
+      (file) =>
+        typeof file.mimeType === 'string' &&
+        (file.mimeType.startsWith(IMAGE_MIME_PREFIX) || file.mimeType.startsWith(VIDEO_MIME_PREFIX)) &&
+        !file.mimeType.startsWith(GOOGLE_APP_MIME_PREFIX),
+    );
+
+    const maxBytes = config.storage.maxUploadBytes;
+    const mediaFiles = allCandidates.filter((file) => Number(file.size ?? 0) <= maxBytes).slice(0, MAX_FILES_PER_IMPORT);
 
     if (mediaFiles.length === 0) {
+      if (allCandidates.length > 0) {
+        const first = allCandidates[0];
+        const sizeMb = (Number(first.size ?? 0) / (1024 * 1024)).toFixed(1);
+        const maxMb = Math.round(maxBytes / (1024 * 1024));
+        throw new DriveImportError(
+          'PAYLOAD_TOO_LARGE',
+          `File "${first.name}" (${sizeMb} MB) exceeds maximum upload limit of ${maxMb} MB.`,
+          413,
+        );
+      }
       throw new DriveImportError(
         'NO_IMAGES',
         'No usable photos or videos found in that link (photos & videos only: JPEG/PNG/WebP/MP4/WebM/MOV). Check the file or folder is shared.',
@@ -160,7 +181,12 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
       const settled = await Promise.allSettled(
         chunk.map(async (file) => {
           const buffer = await downloadFile(file.id);
-          return uploadService.uploadPhoto({ buffer, originalName: file.name, metadata });
+          return uploadService.uploadPhoto({
+            buffer,
+            originalName: file.name,
+            mimeType: file.mimeType,
+            metadata,
+          });
         }),
       );
       settled.forEach((outcome, position) => {

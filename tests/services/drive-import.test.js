@@ -96,7 +96,7 @@ test('drive import imports every image behind a folder link (filters the rest)',
     pdf1aaaaaaaaaaaa: { meta: { id: 'pdf1aaaaaaaaaaaa', name: 'notes.pdf', mimeType: 'application/pdf', size: '10' }, bytes: Buffer.from('%PDF') },
     gdocaaaaaaaaaaaa: { meta: { id: 'gdocaaaaaaaaaaaa', name: 'Doc', mimeType: 'application/vnd.google-apps.document', size: '9' }, bytes: Buffer.alloc(0) },
     img2aaaaaaaaaaaa: { meta: { id: 'img2aaaaaaaaaaaa', name: 'trip.png', mimeType: 'image/png', size: String(png.length) }, bytes: png },
-    hugeaaaaaaaaaaaa: { meta: { id: 'hugeaaaaaaaaaaaa', name: 'huge.jpg', mimeType: 'image/jpeg', size: String(99_999_999) }, bytes: Buffer.alloc(0) },
+    hugeaaaaaaaaaaaa: { meta: { id: 'hugeaaaaaaaaaaaa', name: 'huge.jpg', mimeType: 'image/jpeg', size: String(300_000_000) }, bytes: Buffer.alloc(0) },
   });
 
   const result = await service.importFromDrive({
@@ -135,6 +135,26 @@ test('drive import handles a single-file video link (MP4)', async () => {
   assert.equal(result.uploaded.length, 1);
   assert.equal(result.uploaded[0].filename, 'clip.mp4');
   assert.equal(result.uploaded[0].mediaType, 'video');
+});
+
+test('drive import rejects single oversized file with 413 and clear message', async () => {
+  const service = serviceWith({
+    huge1aaaaaaaaaaa: {
+      meta: { id: 'huge1aaaaaaaaaaa', name: 'large_video.mp4', mimeType: 'video/mp4', size: String(300_000_000) },
+      bytes: Buffer.alloc(0),
+    },
+  });
+
+  await assert.rejects(
+    () => service.importFromDrive({ url: 'https://drive.google.com/file/d/huge1aaaaaaaaaaa/view' }),
+    (err) => {
+      assert.equal(err.status, 413);
+      assert.equal(err.code, 'PAYLOAD_TOO_LARGE');
+      assert.match(err.message, /large_video\.mp4/);
+      assert.match(err.message, /exceeds maximum upload limit/);
+      return true;
+    },
+  );
 });
 
 test('drive import reports per-file failures without aborting the batch', async () => {

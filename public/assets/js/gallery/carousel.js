@@ -49,8 +49,11 @@ export function createCarousel(root, photos, { onOpen } = {}) {
 
   function render(offsetExtra = 0) {
     const firstCard = cards[0];
-    const measuredWidth = firstCard?.offsetWidth || Math.min(280, (root.clientWidth || 360) * 0.75);
-    const cardWidth = measuredWidth + 16;
+    if (!firstCard) return;
+    const style = window.getComputedStyle(track);
+    const gap = parseFloat(style.columnGap || style.gap) || (window.innerWidth <= 720 ? 12 : 24);
+    const measuredWidth = firstCard.offsetWidth || Math.min(250, (root.clientWidth || 360) * 0.72);
+    const cardWidth = measuredWidth + gap;
     const baseOffset = ((root.clientWidth || 360) - measuredWidth) / 2 - index * cardWidth;
     track.style.transform = `translateX(${baseOffset + offsetExtra}px)`;
     for (const [cardIndex, card] of cards.entries()) {
@@ -61,7 +64,7 @@ export function createCarousel(root, photos, { onOpen } = {}) {
   const carouselEl = el('div', { class: 'carousel' }, track);
 
   const onTouchStart = (event) => {
-    if (event.touches.length !== 1) return;
+    if (event.touches.length !== 1 || photos.length <= 1) return;
     startX = event.touches[0].clientX;
     startY = event.touches[0].clientY;
     isDragging = false;
@@ -70,7 +73,7 @@ export function createCarousel(root, photos, { onOpen } = {}) {
   };
 
   const onTouchMove = (event) => {
-    if (event.touches.length !== 1) return;
+    if (event.touches.length !== 1 || photos.length <= 1) return;
     const dx = event.touches[0].clientX - startX;
     const dy = event.touches[0].clientY - startY;
 
@@ -125,6 +128,9 @@ export function createCarousel(root, photos, { onOpen } = {}) {
     },
   });
   const nav = el('div', { class: 'carousel-nav' }, prevBtn, nextBtn);
+  if (photos.length <= 1) {
+    nav.style.display = 'none';
+  }
 
   root.append(carouselEl, nav);
   requestAnimationFrame(() => render());
