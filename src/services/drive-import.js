@@ -17,6 +17,7 @@ import { createTokenProvider } from './drive-auth.js';
 
 const API_BASE = 'https://www.googleapis.com/drive/v3';
 const IMAGE_MIME_PREFIX = 'image/';
+const VIDEO_MIME_PREFIX = 'video/';
 const GOOGLE_APP_MIME_PREFIX = 'application/vnd.google-apps.';
 const MAX_FILES_PER_IMPORT = 100;
 const CONCURRENCY = 3;
@@ -134,28 +135,28 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
       entries = [await fileMetadata(link.id)];
     }
 
-    const images = entries
+    const mediaFiles = entries
       .filter(
         (file) =>
           typeof file.mimeType === 'string' &&
-          file.mimeType.startsWith(IMAGE_MIME_PREFIX) &&
+          (file.mimeType.startsWith(IMAGE_MIME_PREFIX) || file.mimeType.startsWith(VIDEO_MIME_PREFIX)) &&
           !file.mimeType.startsWith(GOOGLE_APP_MIME_PREFIX),
       )
       .filter((file) => Number(file.size ?? 0) <= config.storage.maxUploadBytes)
       .slice(0, MAX_FILES_PER_IMPORT);
 
-    if (images.length === 0) {
+    if (mediaFiles.length === 0) {
       throw new DriveImportError(
         'NO_IMAGES',
-        'No usable photos found in that link (images only: JPEG/PNG/WebP). Check the folder is shared as "Anyone with the link".',
+        'No usable photos or videos found in that link (photos & videos only: JPEG/PNG/WebP/MP4/WebM/MOV). Check the file or folder is shared.',
         422,
       );
     }
 
     const uploaded = [];
     const failed = [];
-    for (let index = 0; index < images.length; index += CONCURRENCY) {
-      const chunk = images.slice(index, index + CONCURRENCY);
+    for (let index = 0; index < mediaFiles.length; index += CONCURRENCY) {
+      const chunk = mediaFiles.slice(index, index + CONCURRENCY);
       const settled = await Promise.allSettled(
         chunk.map(async (file) => {
           const buffer = await downloadFile(file.id);
@@ -174,7 +175,7 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
       });
     }
 
-    return { uploaded, failed, total: images.length };
+    return { uploaded, failed, total: mediaFiles.length };
   }
 
   return { importFromDrive, enabled, mode, serviceAccountEmail: serviceAccount?.client_email ?? '' };

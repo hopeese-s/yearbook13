@@ -125,6 +125,18 @@ test('drive import handles a single-file link', async () => {
   assert.equal(result.uploaded[0].filename, 'one.jpg');
 });
 
+test('drive import handles a single-file video link (MP4)', async () => {
+  const videoBuffer = Buffer.from('fake mp4 video bytes');
+  const service = serviceWith({
+    vid1aaaaaaaaaaaa: { meta: { id: 'vid1aaaaaaaaaaaa', name: 'clip.mp4', mimeType: 'video/mp4', size: String(videoBuffer.length) }, bytes: videoBuffer },
+  });
+
+  const result = await service.importFromDrive({ url: 'https://drive.google.com/file/d/vid1aaaaaaaaaaaa/view' });
+  assert.equal(result.uploaded.length, 1);
+  assert.equal(result.uploaded[0].filename, 'clip.mp4');
+  assert.equal(result.uploaded[0].mediaType, 'video');
+});
+
 test('drive import reports per-file failures without aborting the batch', async () => {
   const jpeg = await makeJpeg(30, 20);
   const service = serviceWith({
