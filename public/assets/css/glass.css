@@ -12,6 +12,7 @@
     0 1px 0 var(--glass-edge) inset,
     0 -1px 0 rgba(0, 0, 0, 0.04) inset,
     0 18px 40px rgba(0, 0, 0, 0.1);
+  isolation: isolate;
 }
 
 /* Refractive highlight sweeping the top rim. */
@@ -27,7 +28,22 @@
     transparent 18%,
     transparent 100%
   );
-  opacity: 0.6;
+  opacity: 0.5;
+}
+
+@media (max-width: 720px) {
+  .glass {
+    -webkit-backdrop-filter: blur(14px) saturate(130%);
+    backdrop-filter: blur(14px) saturate(130%);
+    border-radius: var(--r-md);
+    box-shadow:
+      0 1px 0 var(--glass-edge) inset,
+      0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  .glass::after {
+    opacity: 0.3;
+  }
 }
 
 .glass-strong {

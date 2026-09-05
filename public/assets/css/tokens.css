@@ -30,12 +30,12 @@
   --ok: #1e9e63;
 
   /* --- Liquid Glass material (light surfaces) --- */
-  --glass-fill: rgba(255, 255, 255, 0.6);
-  --glass-fill-strong: rgba(255, 255, 255, 0.78);
+  --glass-fill: rgba(255, 255, 255, 0.70);
+  --glass-fill-strong: rgba(255, 255, 255, 0.88);
   --glass-border: rgba(0, 0, 0, 0.08);
-  --glass-edge: rgba(255, 255, 255, 0.85);
-  --glass-blur: 22px;
-  --glass-saturate: 160%;
+  --glass-edge: rgba(255, 255, 255, 0.75);
+  --glass-blur: 20px;
+  --glass-saturate: 140%;
 
   /* --- Neumorphic shadow pairs (soft, diffuse on white) --- */
   --neu-out:
@@ -107,10 +107,10 @@
   --accent-soft: rgba(41, 151, 255, 0.16);
 
   /* --- Liquid Glass material (dark surfaces) --- */
-  --glass-fill: rgba(19, 23, 40, 0.72);
-  --glass-fill-strong: rgba(24, 29, 50, 0.88);
+  --glass-fill: rgba(14, 18, 32, 0.76);
+  --glass-fill-strong: rgba(18, 23, 42, 0.92);
   --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-edge: rgba(255, 255, 255, 0.2);
+  --glass-edge: rgba(255, 255, 255, 0.16);
 
   /* --- Neumorphic shadow pairs (dark) --- */
   --neu-out:

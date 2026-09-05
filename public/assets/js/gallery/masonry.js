@@ -1,17 +1,8 @@
 import { el } from '../ui/dom.js';
 
-/** Masonry (Pinterest-style) grid. Spans come from STORED dimensions when
- * available (no lazy-load reflow); the load handler is only a fallback. */
 export function renderMasonry(container, photos, { onOpen, onQuickView } = {}) {
   container.hidden = false;
   container.replaceChildren();
-
-  const setSpan = (card, width, height) => {
-    if (!width || !height) return;
-    const rendered = card.querySelector('img').clientWidth || 230;
-    const boxHeight = (rendered * height) / width;
-    card.style.setProperty('--span', String(Math.max(6, Math.ceil((boxHeight + 14) / 8))));
-  };
 
   for (const photo of photos) {
     const isVideo = photo.mediaType === 'video' || /\.(mp4|webm|mov)$/i.test(photo.filename ?? '');
@@ -21,12 +12,9 @@ export function renderMasonry(container, photos, { onOpen, onQuickView } = {}) {
       loading: 'lazy',
       decoding: 'async',
     });
-    img.addEventListener('load', () => {
-      // Fallback when the record lacks stored dimensions.
-      if (photo.width && photo.height) return;
-      const card = img.closest('.photo-card');
-      if (card) setSpan(card, img.naturalWidth, img.naturalHeight);
-    });
+    if (photo.width && photo.height) {
+      img.style.aspectRatio = `${photo.width} / ${photo.height}`;
+    }
 
     const card = el(
       'figure',
@@ -54,8 +42,6 @@ export function renderMasonry(container, photos, { onOpen, onQuickView } = {}) {
       card.classList.remove('dragging');
     });
 
-    // Stored server-side dimensions -> immediate span, no reflow cascade.
-    requestAnimationFrame(() => setSpan(card, photo.width, photo.height));
     card.addEventListener('click', () => onOpen?.(photo));
     card.addEventListener('dblclick', () => onQuickView?.(photo));
     card.addEventListener('keydown', (event) => {

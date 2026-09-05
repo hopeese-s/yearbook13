@@ -513,29 +513,64 @@
 .photo-card figcaption {
   position: absolute;
   inset: auto 0 0 0;
-  padding: 26px 12px 10px;
-  background: linear-gradient(transparent, rgba(255, 255, 255, 0.92));
-  font-size: 0.85rem;
-  color: var(--ink-hi);
+  padding: 24px 10px 8px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+  font-size: 0.82rem;
+  color: #ffffff;
   opacity: 0;
-  transition: opacity var(--t-med) var(--ease-out);
+  transition: opacity var(--t-fast) var(--ease-out);
+  pointer-events: none;
 }
 
 .photo-card:hover figcaption {
   opacity: 1;
 }
 
-/* --- Masonry (Pinterest grid) --- */
+@media (hover: none) {
+  .photo-card figcaption {
+    opacity: 1;
+    padding: 16px 8px 6px;
+    font-size: 0.75rem;
+  }
+}
+
+/* --- Masonry Grid (Hardware-Accelerated CSS Multi-Column) --- */
 .masonry {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  grid-auto-rows: 8px;
-  gap: 0 14px;
+  column-count: 4;
+  column-gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 1100px) {
+  .masonry {
+    column-count: 3;
+    column-gap: 14px;
+  }
+}
+
+@media (max-width: 720px) {
+  .masonry {
+    column-count: 2;
+    column-gap: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .masonry {
+    column-count: 1;
+    column-gap: 0;
+  }
 }
 
 .masonry .photo-card {
-  grid-row-end: span var(--span, 12);
+  break-inside: avoid;
+  page-break-inside: avoid;
+  -webkit-column-break-inside: avoid;
   margin-bottom: 14px;
+  display: inline-block;
+  width: 100%;
+  content-visibility: auto;
+  contain-intrinsic-size: 200px 250px;
 }
 
 /* --- Carousel (coverflow) --- */

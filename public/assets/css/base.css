@@ -32,9 +32,9 @@ body {
     radial-gradient(900px 600px at -10% 30%, var(--aurora-violet), transparent 55%),
     radial-gradient(800px 700px at 110% 80%, var(--aurora-pink), transparent 55%),
     var(--bg-0);
-  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 body::selection {
@@ -79,7 +79,7 @@ body::selection {
   background: rgba(255, 255, 255, 0.28);
 }
 
-/* Film-grain so the glass has something real to refract. */
+/* Film-grain so the glass has something real to refract (desktop only). */
 body::before {
   content: '';
   position: fixed;
@@ -88,6 +88,12 @@ body::before {
   pointer-events: none;
   opacity: 0.3;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+}
+
+@media (max-width: 720px) {
+  body::before {
+    display: none;
+  }
 }
 
 h1,
