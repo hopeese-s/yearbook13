@@ -73,7 +73,10 @@ export async function initHero(mount, photos) {
   const cards = await Promise.all(
     chosen.map(async (photo, index) => {
       try {
-        const texture = await roundedTexture(photo.thumbUrl);
+        const thumbUrl = photo.id
+          ? `/api/photos/${encodeURIComponent(photo.id)}/thumb?proxy=1`
+          : photo.thumbUrl;
+        const texture = await roundedTexture(thumbUrl);
         const imageAspect = texture.image ? texture.image.width / texture.image.height : 4 / 3;
         // Portrait phones have a narrow horizontal frustum: use smaller cards
         // and a tighter cluster so the whole group stays visible.
@@ -120,6 +123,14 @@ export async function initHero(mount, photos) {
       }
     }),
   );
+
+  const validCards = cards.filter(Boolean);
+  if (validCards.length === 0) {
+    renderer.dispose();
+    renderer.domElement.remove();
+    const { renderHeroFallback } = await import('./fallback.js');
+    return renderHeroFallback(mount, chosen);
+  }
 
   // Cursor tilt (desktop, motion allowed).
   let targetTiltX = 0;

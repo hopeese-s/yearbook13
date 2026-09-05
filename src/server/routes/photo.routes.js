@@ -194,7 +194,24 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
   router.get('/api/photos/:id/thumb', async (req, res, next) => {
     try {
       const record = await repository.getPhoto(req.params.id);
+      if (!record) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Photo not found' } });
+      res.setHeader('Access-Control-Allow-Origin', '*');
+
       if (record?.externalThumbUrl) {
+        if (req.query.proxy === '1') {
+          try {
+            const upstream = await fetch(record.externalThumbUrl);
+            if (upstream.ok) {
+              const contentType = upstream.headers.get('content-type') || 'image/jpeg';
+              res.setHeader('Content-Type', contentType);
+              res.setHeader('Cache-Control', 'public, max-age=86400');
+              const buffer = Buffer.from(await upstream.arrayBuffer());
+              return res.send(buffer);
+            }
+          } catch (err) {
+            logger.warn(`Failed to proxy external thumb for photo ${record.id}: ${err.message}`);
+          }
+        }
         return res.redirect(record.externalThumbUrl);
       }
       await sendObject(res, record?.thumbKey, 'image/webp')(record);

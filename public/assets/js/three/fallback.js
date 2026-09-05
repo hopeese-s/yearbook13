@@ -14,26 +14,35 @@ export function renderHeroFallback(mount, photos) {
     'overflow:hidden',
   ].join(';');
 
-  const layouts = [
-    { x: '62%', y: '12%', z: 'rotate(-8deg)', w: 190 },
-    { x: '78%', y: '42%', z: 'rotate(6deg)', w: 150 },
-    { x: '55%', y: '58%', z: 'rotate(-14deg)', w: 130 },
-    { x: '84%', y: '8%', z: 'rotate(12deg)', w: 110 },
-  ];
+  const isMobile = window.innerWidth <= 720;
+  const layouts = isMobile
+    ? [
+        { x: '42%', y: '10%', z: 'rotate(-6deg)', w: 140 },
+        { x: '58%', y: '40%', z: 'rotate(5deg)', w: 130 },
+        { x: '35%', y: '58%', z: 'rotate(-10deg)', w: 120 },
+      ]
+    : [
+        { x: '58%', y: '10%', z: 'rotate(-8deg)', w: 200 },
+        { x: '75%', y: '38%', z: 'rotate(6deg)', w: 170 },
+        { x: '52%', y: '56%', z: 'rotate(-12deg)', w: 150 },
+        { x: '82%', y: '8%', z: 'rotate(10deg)', w: 130 },
+        { x: '66%', y: '68%', z: 'rotate(4deg)', w: 140 },
+      ];
 
   photos.slice(0, layouts.length).forEach((photo, index) => {
     const layout = layouts[index];
-    const card = el('div', { class: 'photo-card' });
-    const img = el('img', { src: photo.thumbUrl, alt: '' });
-    img.loading = 'lazy';
+    const card = el('div', { class: 'photo-card hero-fallback-card' });
+    const img = el('img', { src: photo.thumbUrl, alt: photo.caption || '', loading: 'eager' });
     card.append(img);
     card.style.cssText = [
-      `position:absolute`,
+      'position:absolute',
       `left:${layout.x}`,
       `top:${layout.y}`,
       `width:${layout.w}px`,
       `transform:${layout.z}`,
-      `box-shadow:0 20px 50px rgba(0,0,0,0.55)`,
+      'border-radius:12px',
+      'overflow:hidden',
+      'box-shadow:0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.15)',
     ].join(';');
     scene.append(card);
   });

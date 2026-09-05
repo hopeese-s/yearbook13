@@ -8,27 +8,31 @@ export function roundedTexture(url, radiusRatio = 0.06) {
     const image = new Image();
     image.crossOrigin = 'anonymous';
     image.onload = () => {
-      const canvas = document.createElement('canvas');
-      const scale = Math.min(1, 640 / Math.max(image.width, image.height));
-      canvas.width = Math.max(2, Math.round(image.width * scale));
-      canvas.height = Math.max(2, Math.round(image.height * scale));
-      const ctx = canvas.getContext('2d');
-      const radius = Math.min(canvas.width, canvas.height) * radiusRatio;
+      try {
+        const canvas = document.createElement('canvas');
+        const scale = Math.min(1, 640 / Math.max(image.width, image.height));
+        canvas.width = Math.max(2, Math.round(image.width * scale));
+        canvas.height = Math.max(2, Math.round(image.height * scale));
+        const ctx = canvas.getContext('2d');
+        const radius = Math.min(canvas.width, canvas.height) * radiusRatio;
 
-      ctx.beginPath();
-      ctx.moveTo(radius, 0);
-      ctx.arcTo(canvas.width, 0, canvas.width, canvas.height, radius);
-      ctx.arcTo(canvas.width, canvas.height, 0, canvas.height, radius);
-      ctx.arcTo(0, canvas.height, 0, 0, radius);
-      ctx.arcTo(0, 0, canvas.width, 0, radius);
-      ctx.closePath();
-      ctx.clip();
-      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        ctx.beginPath();
+        ctx.moveTo(radius, 0);
+        ctx.arcTo(canvas.width, 0, canvas.width, canvas.height, radius);
+        ctx.arcTo(canvas.width, canvas.height, 0, canvas.height, radius);
+        ctx.arcTo(0, canvas.height, 0, 0, radius);
+        ctx.arcTo(0, 0, canvas.width, 0, radius);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.anisotropy = 4;
-      resolve(texture);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = 4;
+        resolve(texture);
+      } catch (err) {
+        reject(err);
+      }
     };
     image.onerror = () => reject(new Error(`Failed to load hero image: ${url}`));
     image.src = url;
