@@ -142,11 +142,76 @@ export function createUploadService({ storage, repository }) {
     }
   }
 
+  async function createExternalMediaRecord({
+    originalName,
+    mimeType = 'video/mp4',
+    externalUrl = '',
+    embedUrl = '',
+    externalThumbUrl = '',
+    driveFileId = '',
+    width = 640,
+    height = 360,
+    metadata = {},
+  }) {
+    const { value: meta, errors } = validatePhotoInput(metadata);
+    if (errors.length > 0) {
+      throw Object.assign(new Error(errors.join('; ')), { code: 'INVALID_METADATA', status: 400 });
+    }
+
+    const id = newPhotoId();
+    const isVideo = isVideoContent({ originalName, mimeType });
+
+    let thumbKey = '';
+    const savedKeys = [];
+
+    // If no external thumbnail URL is provided, generate a small WebP poster and store it
+    if (!externalThumbUrl) {
+      thumbKey = `photos/thumb/${id}.webp`;
+      try {
+        const thumbBuffer = await createVideoPoster(originalName);
+        await storage.save(thumbKey, thumbBuffer);
+        savedKeys.push(thumbKey);
+      } catch (err) {
+        logger.warn(`Failed to store fallback poster thumbnail: ${err.message}`);
+        thumbKey = '';
+      }
+    }
+
+    const baseRecord = createPhotoRecord(meta, {
+      id,
+      filename: safeFilename(originalName),
+      storageKey: '',
+      thumbKey,
+      mediaType: isVideo ? 'video' : 'image',
+      width: Number(width) || 640,
+      height: Number(height) || 360,
+      thumbWidth: 480,
+      thumbHeight: 270,
+      createdAt: new Date().toISOString(),
+    });
+
+    const record = {
+      ...baseRecord,
+      externalUrl: externalUrl || embedUrl,
+      embedUrl: embedUrl || externalUrl,
+      externalThumbUrl: externalThumbUrl || '',
+      driveFileId: driveFileId || '',
+    };
+
+    try {
+      await repository.createPhoto(record);
+      return record;
+    } catch (err) {
+      await Promise.allSettled(savedKeys.map((key) => storage.delete(key)));
+      throw err;
+    }
+  }
+
   async function deletePhoto(record) {
     await repository.deletePhoto(record.id);
     // Best-effort object deletion, but NEVER silent: a failed storage delete
     // leaves photo bytes behind (privacy lifecycle), so log the exact keys.
-    const keys = [record.storageKey, record.thumbKey];
+    const keys = [record.storageKey, record.thumbKey].filter(Boolean);
     const results = await Promise.allSettled(keys.map((key) => storage.delete(key)));
     results.forEach((result, index) => {
       if (result.status === 'rejected') {
@@ -155,5 +220,5 @@ export function createUploadService({ storage, repository }) {
     });
   }
 
-  return { uploadPhoto, deletePhoto };
+  return { uploadPhoto, createExternalMediaRecord, deletePhoto };
 }

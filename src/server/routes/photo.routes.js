@@ -23,10 +23,19 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
 
   const withUrls = (record) => {
     if (!record) return record;
+    const fileUrl =
+      record.externalUrl ||
+      (record.storageKey ? storage.publicUrl(record.storageKey) : null) ||
+      `/api/photos/${record.id}/file`;
+    const thumbUrl =
+      record.externalThumbUrl ||
+      (record.thumbKey ? storage.publicUrl(record.thumbKey) : null) ||
+      (record.thumbKey ? `/api/photos/${record.id}/thumb` : '') ||
+      fileUrl;
     return {
       ...record,
-      fileUrl: storage.publicUrl(record.storageKey) ?? `/api/photos/${record.id}/file`,
-      thumbUrl: storage.publicUrl(record.thumbKey) ?? `/api/photos/${record.id}/thumb`,
+      fileUrl,
+      thumbUrl,
     };
   };
 
@@ -145,6 +154,9 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
   router.get('/api/photos/:id/file', async (req, res, next) => {
     try {
       const record = await repository.getPhoto(req.params.id);
+      if (record?.externalUrl) {
+        return res.redirect(record.externalUrl);
+      }
       const mime = getMimeType(record?.storageKey, 'application/octet-stream');
       await sendObject(res, record?.storageKey, mime)(record);
     } catch (err) {
@@ -155,6 +167,9 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
   router.get('/api/photos/:id/thumb', async (req, res, next) => {
     try {
       const record = await repository.getPhoto(req.params.id);
+      if (record?.externalThumbUrl) {
+        return res.redirect(record.externalThumbUrl);
+      }
       await sendObject(res, record?.thumbKey, 'image/webp')(record);
     } catch (err) {
       next(err);

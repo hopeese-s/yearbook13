@@ -135,12 +135,36 @@ test('drive import handles a single-file video link (MP4)', async () => {
   assert.equal(result.uploaded.length, 1);
   assert.equal(result.uploaded[0].filename, 'clip.mp4');
   assert.equal(result.uploaded[0].mediaType, 'video');
+  assert.equal(result.uploaded[0].embedUrl, 'https://drive.google.com/file/d/vid1aaaaaaaaaaaa/preview');
 });
 
-test('drive import rejects single oversized file with 413 and clear message', async () => {
+test('drive import streams large videos without size limit (Approach 2)', async () => {
+  const service = serviceWith({
+    vid_hugeaaaaaaaa: {
+      meta: {
+        id: 'vid_hugeaaaaaaaa',
+        name: 'DSC_1997.MP4',
+        mimeType: 'video/mp4',
+        size: '319291392', // ~304.5 MB
+        thumbnailLink: 'https://lh3.googleusercontent.com/u/0/d/vid_huge=s220',
+      },
+      bytes: Buffer.alloc(0),
+    },
+  });
+
+  const result = await service.importFromDrive({ url: 'https://drive.google.com/file/d/vid_hugeaaaaaaaa/view' });
+  assert.equal(result.uploaded.length, 1);
+  assert.equal(result.uploaded[0].filename, 'DSC_1997.MP4');
+  assert.equal(result.uploaded[0].mediaType, 'video');
+  assert.equal(result.uploaded[0].embedUrl, 'https://drive.google.com/file/d/vid_hugeaaaaaaaa/preview');
+  assert.equal(result.uploaded[0].driveFileId, 'vid_hugeaaaaaaaa');
+  assert.match(result.uploaded[0].externalThumbUrl, /lh3\.googleusercontent\.com/);
+});
+
+test('drive import rejects single oversized image with 413 and clear message', async () => {
   const service = serviceWith({
     huge1aaaaaaaaaaa: {
-      meta: { id: 'huge1aaaaaaaaaaa', name: 'large_video.mp4', mimeType: 'video/mp4', size: String(300_000_000) },
+      meta: { id: 'huge1aaaaaaaaaaa', name: 'huge_photo.jpg', mimeType: 'image/jpeg', size: String(300_000_000) },
       bytes: Buffer.alloc(0),
     },
   });
@@ -150,7 +174,7 @@ test('drive import rejects single oversized file with 413 and clear message', as
     (err) => {
       assert.equal(err.status, 413);
       assert.equal(err.code, 'PAYLOAD_TOO_LARGE');
-      assert.match(err.message, /large_video\.mp4/);
+      assert.match(err.message, /huge_photo\.jpg/);
       assert.match(err.message, /exceeds maximum upload limit/);
       return true;
     },

@@ -166,16 +166,35 @@ export class PhotoPreview {
     clear(this.#stage);
     let media;
     if (isVideo) {
-      media = el('video', {
-        src: photo.fileUrl,
-        controls: 'true',
-        autoplay: 'true',
-        playsinline: 'true',
-        class: 'preview-video',
-      });
-      media.style.maxWidth = '100%';
-      media.style.maxHeight = '100%';
-      media.style.borderRadius = 'var(--r-sm)';
+      if (photo.embedUrl || photo.driveFileId || photo.fileUrl?.includes('drive.google.com')) {
+        const src =
+          photo.embedUrl ||
+          (photo.driveFileId
+            ? `https://drive.google.com/file/d/${encodeURIComponent(photo.driveFileId)}/preview`
+            : photo.fileUrl);
+        media = el('iframe', {
+          src,
+          allow: 'autoplay; fullscreen',
+          allowfullscreen: 'true',
+          class: 'preview-video preview-drive-iframe',
+        });
+        media.style.width = '100%';
+        media.style.height = '100%';
+        media.style.minHeight = '360px';
+        media.style.border = 'none';
+        media.style.borderRadius = 'var(--r-sm)';
+      } else {
+        media = el('video', {
+          src: photo.fileUrl,
+          controls: 'true',
+          autoplay: 'true',
+          playsinline: 'true',
+          class: 'preview-video',
+        });
+        media.style.maxWidth = '100%';
+        media.style.maxHeight = '100%';
+        media.style.borderRadius = 'var(--r-sm)';
+      }
     } else {
       media = el('img', {
         src: photo.fileUrl,

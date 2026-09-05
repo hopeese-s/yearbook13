@@ -94,7 +94,7 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
     do {
       const params = new URLSearchParams({
         q: `'${folderId}' in parents and trashed=false`,
-        fields: 'files(id,name,mimeType,size),nextPageToken',
+        fields: 'files(id,name,mimeType,size,thumbnailLink,videoMediaMetadata,imageMediaMetadata),nextPageToken',
         pageSize: '200',
         supportsAllDrives: 'true',
         includeItemsFromAllDrives: 'true',
@@ -109,7 +109,9 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
   }
 
   async function fileMetadata(fileId) {
-    const res = await driveFetch(`/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size&supportsAllDrives=true`);
+    const res = await driveFetch(
+      `/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size,thumbnailLink,videoMediaMetadata,imageMediaMetadata&supportsAllDrives=true`,
+    );
     return res.json();
   }
 
@@ -153,24 +155,33 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
         !file.mimeType.startsWith(GOOGLE_APP_MIME_PREFIX),
     );
 
-    const maxBytes = config.storage.maxUploadBytes;
-    const mediaFiles = allCandidates.filter((file) => Number(file.size ?? 0) <= maxBytes).slice(0, MAX_FILES_PER_IMPORT);
-
-    if (mediaFiles.length === 0) {
-      if (allCandidates.length > 0) {
-        const first = allCandidates[0];
-        const sizeMb = (Number(first.size ?? 0) / (1024 * 1024)).toFixed(1);
-        const maxMb = Math.round(maxBytes / (1024 * 1024));
-        throw new DriveImportError(
-          'PAYLOAD_TOO_LARGE',
-          `File "${first.name}" (${sizeMb} MB) exceeds maximum upload limit of ${maxMb} MB.`,
-          413,
-        );
-      }
+    if (allCandidates.length === 0) {
       throw new DriveImportError(
         'NO_IMAGES',
         'No usable photos or videos found in that link (photos & videos only: JPEG/PNG/WebP/MP4/WebM/MOV). Check the file or folder is shared.',
         422,
+      );
+    }
+
+    const maxBytes = config.storage.maxUploadBytes;
+    // For videos: streaming directly from Google Drive (Approach 2) uses zero local/R2 storage,
+    // so no file size limit is imposed. For images: upload size limits still apply.
+    const mediaFiles = allCandidates
+      .filter((file) => {
+        const isVideo = file.mimeType?.startsWith(VIDEO_MIME_PREFIX);
+        if (isVideo) return true;
+        return Number(file.size ?? 0) <= maxBytes;
+      })
+      .slice(0, MAX_FILES_PER_IMPORT);
+
+    if (mediaFiles.length === 0) {
+      const first = allCandidates[0];
+      const sizeMb = (Number(first.size ?? 0) / (1024 * 1024)).toFixed(1);
+      const maxMb = Math.round(maxBytes / (1024 * 1024));
+      throw new DriveImportError(
+        'PAYLOAD_TOO_LARGE',
+        `File "${first.name}" (${sizeMb} MB) exceeds maximum upload limit of ${maxMb} MB.`,
+        413,
       );
     }
 
@@ -180,6 +191,26 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
       const chunk = mediaFiles.slice(index, index + CONCURRENCY);
       const settled = await Promise.allSettled(
         chunk.map(async (file) => {
+          const isVideo = file.mimeType?.startsWith(VIDEO_MIME_PREFIX);
+          if (isVideo && typeof uploadService.createExternalMediaRecord === 'function') {
+            const embedUrl = `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview`;
+            const externalThumbUrl = file.thumbnailLink ? file.thumbnailLink.replace(/=s\d+$/, '=s640') : '';
+            const width = file.videoMediaMetadata?.width || 640;
+            const height = file.videoMediaMetadata?.height || 360;
+
+            return uploadService.createExternalMediaRecord({
+              originalName: file.name,
+              mimeType: file.mimeType,
+              externalUrl: embedUrl,
+              embedUrl,
+              externalThumbUrl,
+              driveFileId: file.id,
+              width,
+              height,
+              metadata,
+            });
+          }
+
           const buffer = await downloadFile(file.id);
           return uploadService.uploadPhoto({
             buffer,

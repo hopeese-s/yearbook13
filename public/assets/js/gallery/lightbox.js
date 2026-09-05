@@ -21,12 +21,32 @@ export function createLightbox() {
   function open(photo, { onClose } = {}) {
     close();
     const isVideo = photo.mediaType === 'video' || /\.(mp4|webm|mov)$/i.test(photo.filename ?? '');
-    const media = isVideo
-      ? el('video', { src: photo.fileUrl, controls: 'true', autoplay: 'true', playsinline: 'true' })
-      : el('img', { src: photo.fileUrl, alt: photo.caption || 'Yearbook photo' });
-    media.style.cssText = 'max-width:min(1100px,94vw);max-height:92vh;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,0.7)';
+    let media;
     if (isVideo) {
+      if (photo.embedUrl || photo.driveFileId || photo.fileUrl?.includes('drive.google.com')) {
+        const src =
+          photo.embedUrl ||
+          (photo.driveFileId
+            ? `https://drive.google.com/file/d/${encodeURIComponent(photo.driveFileId)}/preview`
+            : photo.fileUrl);
+        media = el('iframe', {
+          src,
+          allow: 'autoplay; fullscreen',
+          allowfullscreen: 'true',
+          class: 'lightbox-drive-iframe',
+          style:
+            'width:min(1100px,94vw);height:min(700px,80vh);border:none;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,0.7);background:#000;',
+        });
+      } else {
+        media = el('video', { src: photo.fileUrl, controls: 'true', autoplay: 'true', playsinline: 'true' });
+        media.style.cssText =
+          'max-width:min(1100px,94vw);max-height:92vh;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,0.7)';
+      }
       media.addEventListener('click', (e) => e.stopPropagation());
+    } else {
+      media = el('img', { src: photo.fileUrl, alt: photo.caption || 'Yearbook photo' });
+      media.style.cssText =
+        'max-width:min(1100px,94vw);max-height:92vh;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,0.7)';
     }
 
     overlay = el(
