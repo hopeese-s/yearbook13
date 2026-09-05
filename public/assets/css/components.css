@@ -542,39 +542,67 @@
 .carousel {
   position: relative;
   overflow: hidden;
-  padding: 26px 0;
-  perspective: 1100px;
+  padding: 36px 0;
+  perspective: 1200px;
+  min-height: 460px;
+  display: flex;
+  align-items: center;
 }
 
 .carousel-track {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 24px;
   transition: transform var(--t-slow) var(--ease-out);
   will-change: transform;
 }
 
 .carousel .photo-card {
-  flex: 0 0 240px;
+  flex: 0 0 clamp(340px, 46vw, 640px);
+  aspect-ratio: 16 / 10;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  box-shadow: var(--neu-out);
   transform-style: preserve-3d;
-  transition: transform var(--t-slow) var(--ease-out), filter var(--t-slow) var(--ease-out);
+  transition: transform var(--t-slow) var(--ease-out), filter var(--t-slow) var(--ease-out), box-shadow var(--t-slow) var(--ease-out);
+  cursor: pointer;
+}
+
+.carousel .photo-card img,
+.carousel .photo-card video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .carousel .photo-card.is-active {
-  transform: scale(1.12);
+  transform: scale(1.08) translateZ(36px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 0 2px var(--glass-border);
   z-index: 2;
+  filter: none;
+  opacity: 1;
 }
 
 .carousel .photo-card:not(.is-active) {
-  filter: saturate(0.75);
-  opacity: 0.6;
+  filter: saturate(0.7) brightness(0.85);
+  opacity: 0.55;
+  transform: scale(0.92);
 }
 
 .carousel-nav {
   display: flex;
   justify-content: center;
-  gap: 10px;
-  margin-top: 8px;
+  align-items: center;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.carousel-nav .btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  padding: 0;
 }
 
 /* --- Mac window (lightbox / preview chrome) --- */
@@ -589,21 +617,164 @@
   top: 50%;
   transform: translate(-50%, -50%) scale(0.96);
   opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
   border-radius: var(--r-lg);
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--glass-fill-strong);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
   backdrop-filter: blur(28px) saturate(180%);
   border: 1px solid var(--glass-border);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.7) inset,
-    0 40px 90px rgba(0, 0, 0, 0.18);
-  transition: opacity var(--t-med) var(--ease-out), transform var(--t-med) var(--ease-out);
+    0 1px 0 var(--glass-edge) inset,
+    0 40px 90px rgba(0, 0, 0, 0.28);
+  transition: opacity var(--t-med) var(--ease-out), transform var(--t-med) var(--ease-out), visibility var(--t-med);
 }
 
 .mac-window.open {
   opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
   transform: translate(-50%, -50%) scale(1);
+}
+
+/* Video badge */
+.video-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 3;
+}
+
+/* Folders Drawer */
+.folders-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  z-index: calc(var(--z-window) - 10);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-med) var(--ease-out);
+}
+
+.folders-drawer-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.folders-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(380px, calc(100vw - 32px));
+  background: var(--glass-fill-strong);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border-right: 1px solid var(--glass-border);
+  box-shadow: 10px 0 40px rgba(0, 0, 0, 0.35);
+  z-index: var(--z-window);
+  transform: translateX(-100%);
+  transition: transform var(--t-med) var(--ease-out);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 20px;
+  overflow-y: auto;
+}
+
+.folders-drawer.open {
+  transform: translateX(0);
+}
+
+.folders-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.folders-drawer-header h3 {
+  font-size: 1.2rem;
+  font-weight: 750;
+  color: var(--ink-hi);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.folder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  color: var(--ink-hi);
+  cursor: pointer;
+  transition: all var(--t-fast) var(--ease-out);
+  user-select: none;
+}
+
+.folder-item:hover,
+.folder-item.active {
+  background: var(--accent-soft);
+  border-color: rgba(var(--accent-rgb), 0.45);
+  transform: translateX(3px);
+}
+
+.folder-item.dragover {
+  background: rgba(var(--accent-rgb), 0.25);
+  border-color: var(--accent);
+  box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.4);
+  transform: scale(1.02);
+}
+
+.folder-icon {
+  font-size: 1.3rem;
+}
+
+.folder-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.folder-name {
+  font-weight: 650;
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-count {
+  font-size: 0.78rem;
+  color: var(--ink-lo);
 }
 
 .titlebar {

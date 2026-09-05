@@ -7,6 +7,7 @@ import { renderMasonry } from './gallery/masonry.js';
 import { createCarousel } from './gallery/carousel.js';
 import { PhotoPreview } from './gallery/preview.js';
 import { createLightbox } from './gallery/lightbox.js';
+import { createFoldersManager } from './gallery/folders.js';
 import { initHero } from './three/hero.js';
 
 /** Public gallery entry: boot the Experience surface. */
@@ -22,6 +23,10 @@ const heroMount = document.getElementById('hero-mount');
 const wallCount = document.getElementById('wall-count');
 const themeToggle = document.getElementById('theme-toggle');
 
+const foldersDrawer = document.getElementById('folders-drawer');
+const foldersBackdrop = document.getElementById('folders-backdrop');
+const foldersBtn = document.getElementById('folders-btn');
+
 initFocusPolicy();
 initMenu();
 initTheme(themeToggle);
@@ -31,19 +36,45 @@ let galleryTotal = 0;
 let activeCollection = '';
 let carousel = null;
 let carouselOn = false;
+let chips = null;
 
-const preview = new PhotoPreview([]);
-preview.bindKeyboard();
 const lightbox = createLightbox();
 
 function openPreview(photo) {
   const index = Math.max(0, allPhotos.findIndex((candidate) => candidate.id === photo.id));
-  preview.open(index);
+  // Multi-window Mac Desktop: open independent window for each photo
+  const win = new PhotoPreview(allPhotos);
+  win.bindKeyboard();
+  win.open(index);
 }
 
 function openQuickView(photo) {
   lightbox.open(photo);
 }
+
+const foldersManager = createFoldersManager({
+  drawerRoot: foldersDrawer,
+  backdropRoot: foldersBackdrop,
+  toggleBtn: foldersBtn,
+  onSelectFolder: (folder) => {
+    activeCollection = folder;
+    chips?.setActive(folder);
+    renderGallery();
+  },
+  onPhotoMoved: () => {
+    renderGallery();
+  },
+});
+
+window.addEventListener('ims13-photo-updated', (event) => {
+  const updated = event.detail;
+  const idx = allPhotos.findIndex((p) => p.id === updated.id);
+  if (idx !== -1) {
+    allPhotos[idx] = { ...allPhotos[idx], ...updated };
+    renderGallery();
+    foldersManager.setPhotos(allPhotos);
+  }
+});
 
 let searchQuery = '';
 let activePerson = '';
@@ -141,7 +172,7 @@ async function boot() {
     const result = await getPhotos({ limit: 200 });
     allPhotos = result.items ?? [];
     galleryTotal = Number(result.total ?? allPhotos.length);
-    preview.replacePhotos?.(allPhotos);
+    foldersManager.setPhotos(allPhotos);
 
     if (allPhotos.length === 0) {
       renderState(statePanel, {
@@ -153,15 +184,19 @@ async function boot() {
     }
 
     const collections = [...new Set(allPhotos.flatMap((photo) => photo.collections ?? []))];
-    const chips = initChips(chipsRoot, collections, {
+    chips = initChips(chipsRoot, collections, {
       onSelect: (value) => {
         activeCollection = value;
         chips.setActive(value);
+        foldersManager.setCurrentFolder(value);
         renderGallery();
       },
     });
 
-    if (activeCollection) chips.setActive(activeCollection);
+    if (activeCollection) {
+      chips.setActive(activeCollection);
+      foldersManager.setCurrentFolder(activeCollection);
+    }
 
     // Hero: silent failure — the copy still works without 3D.
     initHero(heroMount, allPhotos).catch(() => {});

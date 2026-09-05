@@ -20,26 +20,20 @@ export function createLightbox() {
 
   function open(photo, { onClose } = {}) {
     close();
+    const isVideo = photo.mediaType === 'video' || /\.(mp4|webm|mov)$/i.test(photo.filename ?? '');
+    const media = isVideo
+      ? el('video', { src: photo.fileUrl, controls: 'true', autoplay: 'true', playsinline: 'true' })
+      : el('img', { src: photo.fileUrl, alt: photo.caption || 'Yearbook photo' });
+    media.style.cssText = 'max-width:min(1100px,94vw);max-height:92vh;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,0.7)';
+    if (isVideo) {
+      media.addEventListener('click', (e) => e.stopPropagation());
+    }
+
     overlay = el(
       'div',
-      { class: 'lightbox-overlay', role: 'dialog', 'aria-modal': 'true', 'aria-label': photo.caption || 'Photo' },
-      el('img', { src: photo.fileUrl, alt: photo.caption || 'Yearbook photo' }),
+      { class: 'lightbox-overlay', role: 'dialog', 'aria-modal': 'true', 'aria-label': photo.caption || 'Media' },
+      media,
     );
-    overlay.style.cssText = [
-      'position:fixed',
-      'inset:0',
-      'z-index:var(--z-lightbox)',
-      'display:flex',
-      'align-items:center',
-      'justify-content:center',
-      'padding:24px',
-      'background:rgba(4,5,9,0.78)',
-      '-webkit-backdrop-filter:blur(18px) saturate(140%)',
-      'backdrop-filter:blur(18px) saturate(140%)',
-      'animation:lbIn 220ms cubic-bezier(0.22,1,0.36,1)',
-    ].join(';');
-    const img = overlay.querySelector('img');
-    img.style.cssText = 'max-width:min(1100px,94vw);max-height:92vh;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,0.7)';
 
     const dismiss = () => {
       close();

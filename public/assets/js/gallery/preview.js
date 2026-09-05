@@ -33,6 +33,7 @@ export class PhotoPreview {
       this.#tool('−', 'Zoom out', () => this.setZoom(this.#state.zoom - 0.5)),
       this.#tool('+', 'Zoom in', () => this.setZoom(this.#state.zoom + 0.5)),
       this.#tool('⟳', 'Rotate 90°', () => this.rotate()),
+      this.#tool('📁', 'Move to folder', () => this.moveToFolder()),
       this.#tool('▶', 'Play slideshow', () => this.toggleSlideshow(), 'slideshow-btn'),
       this.#tool('⟲', 'Reset view', () => this.reset()),
       this.#tool('›', 'Next photo', () => this.next()),
@@ -43,6 +44,29 @@ export class PhotoPreview {
 
   #tool(label, ariaLabel, onClick, extraClass = '') {
     return el('button', { class: `tool-btn ${extraClass}`.trim(), type: 'button', 'aria-label': ariaLabel, text: label, onclick: onClick });
+  }
+
+  async moveToFolder() {
+    const photo = this.#photos[this.#state.index];
+    if (!photo) return;
+    const currentFolder = photo.collections?.[0] || '';
+    const target = window.prompt('Enter folder name for this photo/video:', currentFolder);
+    if (target === null) return;
+    const folder = target.trim();
+    const newCollections = folder ? [folder] : [];
+    try {
+      const res = await fetch(`/api/photos/${photo.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collections: newCollections }),
+      });
+      if (res.ok) {
+        photo.collections = newCollections;
+        window.dispatchEvent(new CustomEvent('ims13-photo-updated', { detail: photo }));
+      }
+    } catch {
+      // ignore
+    }
   }
 
   toggleSlideshow() {
@@ -129,22 +153,37 @@ export class PhotoPreview {
   }
 
   #applyTransform() {
-    const img = this.#stage.querySelector('img');
+    const img = this.#stage.querySelector('img, video');
     if (img) img.style.transform = `scale(${this.#state.zoom}) rotate(${this.#state.rotation}deg)`;
   }
 
   #render() {
     const photo = this.#photos[this.#state.index];
     if (!photo) return;
-    this.#window.setTitle(photo.caption || 'Preview');
+    const isVideo = photo.mediaType === 'video' || /\.(mp4|webm|mov)$/i.test(photo.filename ?? '');
+    this.#window.setTitle(photo.caption || (isVideo ? 'Video Preview' : 'Photo Preview'));
 
     clear(this.#stage);
-    const img = el('img', {
-      src: photo.fileUrl,
-      alt: photo.caption || 'Yearbook photo',
-      draggable: 'false',
-    });
-    this.#stage.append(img);
+    let media;
+    if (isVideo) {
+      media = el('video', {
+        src: photo.fileUrl,
+        controls: 'true',
+        autoplay: 'true',
+        playsinline: 'true',
+        class: 'preview-video',
+      });
+      media.style.maxWidth = '100%';
+      media.style.maxHeight = '100%';
+      media.style.borderRadius = 'var(--r-sm)';
+    } else {
+      media = el('img', {
+        src: photo.fileUrl,
+        alt: photo.caption || 'Yearbook photo',
+        draggable: 'false',
+      });
+    }
+    this.#stage.append(media);
     this.#applyTransform();
 
     clear(this.#filmstrip);

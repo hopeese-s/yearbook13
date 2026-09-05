@@ -9,6 +9,7 @@ export function createCarousel(root, photos, { onOpen } = {}) {
   const track = el('div', { class: 'carousel-track' });
 
   const cards = photos.map((photo, photoIndex) => {
+    const isVideo = photo.mediaType === 'video' || /\.(mp4|webm|mov)$/i.test(photo.filename ?? '');
     const card = el(
       'figure',
       {
@@ -18,6 +19,7 @@ export function createCarousel(root, photos, { onOpen } = {}) {
         'aria-label': photo.caption || 'Photo',
       },
       el('img', { src: photo.thumbUrl, alt: photo.caption || 'Yearbook photo', loading: 'lazy' }),
+      isVideo ? el('span', { class: 'video-badge', text: '▶ Video' }) : null,
     );
     card.addEventListener('click', () => {
       if (photoIndex === index) onOpen?.(photo);
@@ -41,8 +43,9 @@ export function createCarousel(root, photos, { onOpen } = {}) {
   });
 
   function render() {
-    const cardWidth = 240 + 18; // width + gap
-    const offset = (root.clientWidth - cardWidth) / 2 - index * cardWidth;
+    const firstCard = cards[0];
+    const cardWidth = (firstCard?.offsetWidth || 440) + 24; // measured width + gap
+    const offset = (root.clientWidth - (firstCard?.offsetWidth || 440)) / 2 - index * cardWidth;
     track.style.transform = `translateX(${offset}px)`;
     for (const [cardIndex, card] of cards.entries()) {
       card.classList.toggle('is-active', cardIndex === index);
@@ -54,14 +57,27 @@ export function createCarousel(root, photos, { onOpen } = {}) {
   const nav = el('div', { class: 'carousel-nav' }, prevBtn, nextBtn);
 
   root.append(el('div', { class: 'carousel' }, track), nav);
-  render();
+  requestAnimationFrame(() => render());
 
   const onResize = () => render();
   window.addEventListener('resize', onResize, { passive: true });
 
+  const onKeydown = (event) => {
+    if (root.hidden) return;
+    if (event.key === 'ArrowLeft') {
+      index = (index - 1 + photos.length) % photos.length;
+      render();
+    } else if (event.key === 'ArrowRight') {
+      index = (index + 1) % photos.length;
+      render();
+    }
+  };
+  window.addEventListener('keydown', onKeydown);
+
   return {
     destroy() {
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('keydown', onKeydown);
       root.replaceChildren();
       root.hidden = true;
     },

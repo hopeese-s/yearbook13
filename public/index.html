@@ -53,6 +53,7 @@
         <p class="wall-count" id="wall-count">— photographs</p>
       </div>
       <div class="toolbar glass wall-toolbar">
+        <button class="btn" id="folders-btn" type="button" aria-label="Open folders"><span aria-hidden="true">📁</span> Folders</button>
         <div class="search-box">
           <input id="gallery-search" type="search" placeholder="Search caption, tags, people…" aria-label="Search photos">
         </div>
@@ -75,6 +76,8 @@
     <p>Photos stay on this site · IMS13 Yearbook</p>
   </footer>
 
+  <div id="folders-backdrop" class="folders-drawer-backdrop"></div>
+  <aside id="folders-drawer" class="folders-drawer" aria-label="Folders drawer"></aside>
   <div id="lightbox-root"></div>
   <script type="module" src="/assets/js/main.js"></script>
 </body>

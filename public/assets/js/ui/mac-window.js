@@ -5,8 +5,11 @@ import { el, clear } from './dom.js';
  * Reusable: open/close cycles are safe, Escape only works while open,
  * and the root survives close (re-attached on the next open).
  */
-export function createMacWindow({ title, onClose } = {}) {
-  const root = el('div', { class: 'mac-window', role: 'dialog', 'aria-modal': 'true', 'aria-label': title ?? 'Preview' });
+let topZIndex = 100;
+let cascadeCount = 0;
+
+export function createMacWindow({ title, onClose, initialOffset = true } = {}) {
+  const root = el('div', { class: 'mac-window', role: 'dialog', 'aria-modal': 'false', 'aria-label': title ?? 'Preview' });
 
   const titleNode = el('div', { class: 'window-title', text: title ?? '' });
   const titlebar = el(
@@ -30,15 +33,49 @@ export function createMacWindow({ title, onClose } = {}) {
   let zoomed = false;
   let keydownBound = false;
 
+  function bringToFront() {
+    topZIndex += 1;
+    root.style.zIndex = String(topZIndex);
+  }
+
+  root.addEventListener('pointerdown', () => bringToFront());
+
   function toggleZoom() {
     if (!isOpen) return;
     zoomed = !zoomed;
-    root.style.width = zoomed ? 'calc(100vw - 24px)' : '';
-    root.style.height = zoomed ? 'calc(100vh - 24px)' : '';
+    if (zoomed) {
+      root.style.width = 'calc(100vw - 32px)';
+      root.style.height = 'calc(100vh - 48px)';
+      root.style.left = '50%';
+      root.style.top = '50%';
+      root.style.transform = 'translate(-50%, -50%)';
+    } else {
+      root.style.width = '';
+      root.style.height = '';
+      root.style.transform = 'none';
+      applyCascadePosition();
+    }
   }
 
   function onKeydown(event) {
     if (event.key === 'Escape' && isOpen) close();
+  }
+
+  function applyCascadePosition() {
+    if (window.innerWidth <= 720) {
+      root.style.left = '50%';
+      root.style.top = '50%';
+      root.style.transform = 'translate(-50%, -50%)';
+      return;
+    }
+    if (initialOffset) {
+      const step = (cascadeCount % 6) * 32;
+      const baseLeft = Math.max(20, Math.floor((window.innerWidth - 980) / 2) + step);
+      const baseTop = Math.max(30, Math.floor((window.innerHeight - 680) / 2) + step);
+      root.style.left = `${baseLeft}px`;
+      root.style.top = `${baseTop}px`;
+      root.style.transform = 'none';
+    }
   }
 
   function ensureAttached() {
@@ -47,10 +84,9 @@ export function createMacWindow({ title, onClose } = {}) {
       zoomed = false;
       root.style.width = '';
       root.style.height = '';
-      root.style.left = '';
-      root.style.top = '';
-      root.style.transform = '';
+      applyCascadePosition();
     }
+    bringToFront();
     if (!keydownBound) {
       document.addEventListener('keydown', onKeydown);
       keydownBound = true;
@@ -58,13 +94,22 @@ export function createMacWindow({ title, onClose } = {}) {
   }
 
   function open() {
-    if (isOpen) return;
+    if (isOpen) {
+      bringToFront();
+      return;
+    }
+    cascadeCount += 1;
     ensureAttached();
     isOpen = true;
     previouslyFocused = document.activeElement;
+    root.style.pointerEvents = 'auto';
+    root.style.visibility = 'visible';
+
     // Double rAF so the transition runs after the node is attached/visible.
     requestAnimationFrame(() => requestAnimationFrame(() => root.classList.add('open')));
-    document.body.style.overflow = 'hidden';
+    if (window.innerWidth <= 720) {
+      document.body.style.overflow = 'hidden';
+    }
     root.querySelector('.tl-close')?.focus();
   }
 
@@ -72,9 +117,29 @@ export function createMacWindow({ title, onClose } = {}) {
     if (!isOpen) return;
     isOpen = false;
     root.classList.remove('open');
-    document.body.style.overflow = '';
+    root.style.pointerEvents = 'none';
+    root.style.visibility = 'hidden';
+
+    // Check if any other windows are still open before restoring scroll
+    const anyOpen = Boolean(document.querySelector('.mac-window.open'));
+    if (!anyOpen) {
+      document.body.style.overflow = '';
+    }
+
+    if (keydownBound) {
+      document.removeEventListener('keydown', onKeydown);
+      keydownBound = false;
+    }
+
     onClose?.();
     previouslyFocused?.focus?.();
+
+    // Cleanly remove from DOM after CSS transition finishes
+    setTimeout(() => {
+      if (!isOpen && root.isConnected) {
+        root.remove();
+      }
+    }, 280);
   }
 
   // Drag by titlebar (desktop pointers; mobile stays centered).
@@ -99,7 +164,7 @@ export function createMacWindow({ title, onClose } = {}) {
     drag = null;
   });
 
-  return { root, body, open, close, get isOpen() { return isOpen; }, setTitle: (text) => (titleNode.textContent = text) };
+  return { root, body, open, close, bringToFront, get isOpen() { return isOpen; }, setTitle: (text) => (titleNode.textContent = text) };
 }
 
 export { clear };

@@ -1,4 +1,4 @@
-﻿import { test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
 import request from 'supertest';
@@ -196,4 +196,33 @@ test('admin can edit metadata and delete a photo (record + objects)', async () =
   assert.equal(afterDelete.status, 404);
   const fileAfterDelete = await request(app).get(photo.fileUrl);
   assert.equal(fileAfterDelete.status, 404, 'stored object must be gone after delete');
+});
+
+test('admin can upload a video file and retrieve it with correct MIME type and poster thumbnail', async () => {
+  const app = await uploadApp();
+  const agent = await loginAdmin(app);
+  const fakeVideoBuffer = Buffer.from('fake mp4 video binary content');
+
+  const res = await agent
+    .post('/api/photos')
+    .field('caption', 'Class performance clip')
+    .field('collections', 'Concert,Highlights')
+    .attach('photos', fakeVideoBuffer, { filename: 'clip.mp4', contentType: 'video/mp4' });
+
+  assert.equal(res.status, 201);
+  assert.equal(res.body.uploaded.length, 1);
+  const video = res.body.uploaded[0];
+  assert.equal(video.caption, 'Class performance clip');
+  assert.equal(video.mediaType, 'video');
+  assert.deepEqual(video.collections, ['Concert', 'Highlights']);
+
+  // Verify file serving sets video/mp4 MIME type
+  const fileRes = await request(app).get(video.fileUrl);
+  assert.equal(fileRes.status, 200);
+  assert.equal(fileRes.headers['content-type'], 'video/mp4');
+
+  // Verify thumbnail exists
+  const thumbRes = await request(app).get(video.thumbUrl);
+  assert.equal(thumbRes.status, 200);
+  assert.ok(thumbRes.body.length > 0);
 });

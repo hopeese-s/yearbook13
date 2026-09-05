@@ -1,6 +1,13 @@
 import multer from 'multer';
 
-export const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+export const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+]);
 
 /**
  * Multer upload middleware: memory storage (bounded by fileSize), a hard

@@ -55,11 +55,11 @@
             <div class="steps" id="steps"></div>
 
             <div class="step-pane" data-step="0">
-              <button type="button" class="dropzone" id="dropzone" aria-label="Choose photos">
-                <span><strong>Drop photos here</strong> or click to choose</span>
-                <span class="muted">JPEG · PNG · WebP — up to 25 MB each</span>
+              <button type="button" class="dropzone" id="dropzone" aria-label="Choose photos or videos">
+                <span><strong>Drop photos & videos here</strong> or click to choose</span>
+                <span class="muted">Photos & Videos (JPEG · PNG · WebP · MP4 · WebM) — up to 25 MB each</span>
               </button>
-              <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" multiple hidden>
+              <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" multiple hidden>
               <div class="batch-strip neu-inset" id="batch-strip">
                 <div class="insertion-caret" id="insertion-caret"></div>
               </div>
@@ -67,14 +67,16 @@
             </div>
 
             <div class="step-pane" data-step="1" hidden>
+              <div class="field"><label for="f-collections">📁 Folder / Collection</label>
+                <input id="f-collections" type="text" list="existing-folders-list" placeholder="Choose or type folder (e.g. Graduation, Trip)">
+                <datalist id="existing-folders-list"></datalist>
+              </div>
               <div class="field"><label for="f-caption">Caption</label>
                 <input id="f-caption" type="text" maxlength="300" placeholder="Sports day"></div>
               <div class="field"><label for="f-section">Section</label>
                 <input id="f-section" type="text" maxlength="50" placeholder="IMS13"></div>
               <div class="field"><label for="f-year">Year</label>
                 <input id="f-year" type="number" min="1900" max="2200" placeholder="2026"></div>
-              <div class="field"><label for="f-collections">Collections <span class="muted">(comma-separated)</span></label>
-                <input id="f-collections" type="text" placeholder="sports-day, field-trip"></div>
               <div class="field"><label for="f-tags">Tags <span class="muted">(comma-separated)</span></label>
                 <input id="f-tags" type="text" placeholder="fun, friends"></div>
               <div class="field"><label for="f-personIds">Tagged Friends <span class="muted">(comma-separated)</span></label>

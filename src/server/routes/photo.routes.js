@@ -127,10 +127,25 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
     }
   };
 
+  const getMimeType = (key = '', fallback = 'application/octet-stream') => {
+    const ext = key.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'mp4': return 'video/mp4';
+      case 'webm': return 'video/webm';
+      case 'mov': return 'video/quicktime';
+      case 'jpg':
+      case 'jpeg': return 'image/jpeg';
+      case 'png': return 'image/png';
+      case 'webp': return 'image/webp';
+      default: return fallback;
+    }
+  };
+
   router.get('/api/photos/:id/file', async (req, res, next) => {
     try {
       const record = await repository.getPhoto(req.params.id);
-      await sendObject(res, record?.storageKey, 'application/octet-stream')(record);
+      const mime = getMimeType(record?.storageKey, 'application/octet-stream');
+      await sendObject(res, record?.storageKey, mime)(record);
     } catch (err) {
       next(err);
     }

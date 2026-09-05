@@ -76,13 +76,15 @@ export function validatePhotoInput(input = {}) {
  */
 export function createPhotoRecord(
   metadata,
-  { id, filename, storageKey, thumbKey, width, height, thumbWidth, thumbHeight, createdAt },
+  { id, filename, storageKey, thumbKey, width, height, thumbWidth, thumbHeight, createdAt, mediaType },
 ) {
+  const isVideo = mediaType === 'video' || /\.(mp4|webm|mov)$/i.test(filename ?? '');
   return Object.freeze({
     id,
     filename,
     storageKey,
     thumbKey,
+    mediaType: isVideo ? 'video' : 'image',
     personIds: metadata.personIds,
     collections: metadata.collections,
     tags: metadata.tags,

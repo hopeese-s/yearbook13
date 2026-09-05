@@ -485,6 +485,16 @@ async function loadPhotos() {
     if (photos.length === 0) {
       renderState(manageState, { kind: 'empty', title: 'No photos yet', detail: 'Upload some first.' });
     }
+    const foldersList = document.getElementById('existing-folders-list');
+    if (foldersList) {
+      const existingFolders = [...new Set(photos.flatMap((p) => p.collections ?? []))].filter(Boolean).sort();
+      foldersList.replaceChildren();
+      for (const f of existingFolders) {
+        const opt = document.createElement('option');
+        opt.value = f;
+        foldersList.append(opt);
+      }
+    }
     renderGrid();
   } catch {
     renderState(manageState, { kind: 'error' });
