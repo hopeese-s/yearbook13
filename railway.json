@@ -6,6 +6,7 @@
   },
   "deploy": {
     "startCommand": "MALLOC_ARENA_MAX=2 npm start",
+    "sleepApplication": true,
     "healthcheckPath": "/health",
     "healthcheckTimeout": 30,
     "restartPolicyType": "ON_FAILURE",
