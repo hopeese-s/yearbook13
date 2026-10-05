@@ -17,7 +17,7 @@ export async function createSqlRepository(config, { pool } = {}) {
     pool ??
     new Pool({
       connectionString: config.db.url,
-      max: 5,
+      max: 3,
       ssl: config.db.url.includes('localhost') || config.db.url.includes('127.0.0.1') ? false : { rejectUnauthorized: false },
     });
 

@@ -11,7 +11,7 @@ export async function createPgSessionStore(config, { pool } = {}) {
     pool ??
     new Pool({
       connectionString: config.db.url,
-      max: 5,
+      max: 2,
       ssl: config.db.url.includes('localhost') || config.db.url.includes('127.0.0.1') ? false : { rejectUnauthorized: false },
     });
 

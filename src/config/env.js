@@ -138,8 +138,11 @@ export function loadEnv(source = process.env) {
   }
   const uploadDir = source.UPLOAD_DIR ?? 'uploads';
   const dataDir = source.DATA_DIR ?? 'data';
-  const maxUploadBytes = requireInt(source, 'MAX_UPLOAD_BYTES', failures, { min: 1024 }) ?? 209_715_200;
-  const maxUploadsPerRequest = requireInt(source, 'MAX_UPLOADS_PER_REQUEST', failures, { min: 1 }) ?? 60;
+  // Uploads are buffered in memory (multer.memoryStorage), so peak RAM is roughly
+  // maxUploadBytes x files-per-request. The admin UI promises 25 MB per file and
+  // sends 5 files per request, so these defaults cap the worst case near 250 MB.
+  const maxUploadBytes = requireInt(source, 'MAX_UPLOAD_BYTES', failures, { min: 1024 }) ?? 26_214_400;
+  const maxUploadsPerRequest = requireInt(source, 'MAX_UPLOADS_PER_REQUEST', failures, { min: 1 }) ?? 10;
 
   // --- Metadata database ---
   const dbDriver = requireEnum(source, 'DB_DRIVER', DB_DRIVERS, failures);

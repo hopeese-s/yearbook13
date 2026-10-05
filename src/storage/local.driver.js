@@ -1,3 +1,4 @@
+import { createReadStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { assertDriverContract, normalizeKey, StorageError } from './driver.js';
@@ -36,6 +37,20 @@ export function createLocalStorage(config, { rootDir } = {}) {
       const target = resolveSafe(key);
       try {
         return await fs.readFile(target);
+      } catch (err) {
+        if (err?.code === 'ENOENT') {
+          throw new StorageError('NOT_FOUND', `Object not found: "${key}"`, err);
+        }
+        throw new StorageError('READ_FAILED', `Failed to read "${key}"`, err);
+      }
+    },
+
+    /** Optional: stream an object without buffering it. -> { stream, size } */
+    async readStream(key) {
+      const target = resolveSafe(key);
+      try {
+        const stats = await fs.stat(target);
+        return { stream: createReadStream(target), size: stats.size };
       } catch (err) {
         if (err?.code === 'ENOENT') {
           throw new StorageError('NOT_FOUND', `Object not found: "${key}"`, err);

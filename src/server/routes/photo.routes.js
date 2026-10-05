@@ -1,3 +1,4 @@
+import { pipeline } from 'node:stream/promises';
 import { Router } from 'express';
 import { requireAdmin } from '../middleware/auth.js';
 import { createRateLimiter } from '../middleware/rateLimit.js';
@@ -146,11 +147,25 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
   const sendObject = (res, key, fallbackType) => async (record) => {
     if (!record) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Photo not found' } });
     try {
-      const bytes = await storage.read(key);
       res.set('Content-Type', fallbackType);
       res.set('Cache-Control', 'public, max-age=31536000, immutable');
+      if (typeof storage.readStream === 'function') {
+        // Stream so a big video/photo never sits fully in the Node heap/RSS.
+        const { stream, size } = await storage.readStream(key);
+        if (size !== undefined) res.set('Content-Length', String(size));
+        await pipeline(stream, res);
+        return;
+      }
+      const bytes = await storage.read(key);
       res.send(bytes);
     } catch (err) {
+      if (res.headersSent) {
+        // Client disconnected / mid-stream failure: nothing more to send.
+        res.destroy();
+        return;
+      }
+      res.removeHeader('Content-Length');
+      res.removeHeader('Cache-Control');
       if (err?.code === 'NOT_FOUND') {
         return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Object missing from storage' } });
       }

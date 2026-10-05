@@ -1,6 +1,12 @@
 import sharp from 'sharp';
 import { randomUUID } from 'node:crypto';
 
+// Memory tuning for small hosts: libvips defaults (a cache of recent operations
+// plus one worker thread per host CPU) keep tens/hundreds of MB resident after
+// every upload. Uploads are rare and sequential, so trade a little speed for RAM.
+sharp.cache(false);
+sharp.concurrency(1);
+
 /**
  * Image pipeline (BUILD-PLAN.md Phase 4, exact order):
  *   validation -> orientation normalization -> EXIF/privacy strip ->

@@ -71,6 +71,18 @@ export async function createR2Storage(config, { s3Client } = {}) {
       }
     },
 
+    /** Optional: stream an object without buffering it. -> { stream, size } */
+    async readStream(key) {
+      const normalized = normalizeKey(key);
+      try {
+        const response = await client.send(new GetObjectCommand({ Bucket: bucket, Key: normalized }));
+        return { stream: response.Body, size: response.ContentLength };
+      } catch (err) {
+        if (notFound(err)) throw new StorageError('NOT_FOUND', `Object not found: "${normalized}"`, err);
+        throw new StorageError('READ_FAILED', `Failed to read "${normalized}" from R2`, err);
+      }
+    },
+
     async delete(key) {
       const normalized = normalizeKey(key);
       try {

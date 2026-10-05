@@ -20,7 +20,7 @@ const IMAGE_MIME_PREFIX = 'image/';
 const VIDEO_MIME_PREFIX = 'video/';
 const GOOGLE_APP_MIME_PREFIX = 'application/vnd.google-apps.';
 const MAX_FILES_PER_IMPORT = 100;
-const CONCURRENCY = 3;
+const CONCURRENCY = 2; // each in-flight image holds its full buffer in RAM
 
 export class DriveImportError extends Error {
   constructor(code, message, status = 400) {

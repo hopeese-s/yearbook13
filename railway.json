@@ -5,7 +5,7 @@
     "buildCommand": "npm install --include=dev --no-audit --no-fund && npm run build:check && npm prune --omit=dev"
   },
   "deploy": {
-    "startCommand": "npm start",
+    "startCommand": "MALLOC_ARENA_MAX=2 npm start",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 30,
     "restartPolicyType": "ON_FAILURE",
