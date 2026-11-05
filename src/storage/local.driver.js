@@ -33,6 +33,17 @@ export function createLocalStorage(config, { rootDir } = {}) {
       return { key: normalizeKey(key), size: buffer.length };
     },
 
+    /** Optional: copy a file from disk without loading it into RAM. */
+    async saveFile(key, filePath) {
+      const target = resolveSafe(key);
+      await fs.mkdir(path.dirname(target), { recursive: true });
+      const tmp = `${target}.tmp-${process.pid}-${Date.now()}`;
+      await fs.copyFile(filePath, tmp);
+      await fs.rename(tmp, target);
+      const { size } = await fs.stat(target);
+      return { key: normalizeKey(key), size };
+    },
+
     async read(key) {
       const target = resolveSafe(key);
       try {

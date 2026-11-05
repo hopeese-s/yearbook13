@@ -12,6 +12,10 @@ import path from 'node:path';
  *   async exists(key)        -> boolean
  *   async stat(key)          -> { key, size }
  *   publicUrl(key)           -> string | null (null when not public)
+ *
+ * Optional (memory-saving) methods, used when present:
+ *   async saveFile(key, filePath) -> { key, size }  upload from disk, streamed
+ *   async readStream(key)         -> { stream, size } download without buffering
  */
 
 export class StorageError extends Error {

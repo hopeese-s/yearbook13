@@ -1,10 +1,12 @@
+import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { Router } from 'express';
 import { requireAdmin } from '../middleware/auth.js';
 import { createRateLimiter } from '../middleware/rateLimit.js';
 import { applyPhotoPatch } from '../../domain/photos.js';
-import { buildZip } from '../../util/zip.js';
+import { zipStream } from '../../util/zip.js';
 import { logger } from '../../util/logger.js';
+import { removeQuietly } from '../../util/tmp.js';
 
 /**
  * Photo API (Phase 4 + Phase 2 enhancements).
@@ -56,25 +58,38 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
     offset: query.offset,
   });
 
+  // Streamed: objects flow storage -> ZIP -> client one chunk at a time, so
+  // a multi-GB backup never sits in RAM (it used to be built as one Buffer).
   router.get('/api/photos/export/zip', requireAdmin, async (_req, res, next) => {
-    try {
-      const { items } = await repository.listPhotos({ limit: 9999 });
-      const entries = [];
-      for (const record of items) {
-        try {
-          const bytes = await storage.read(record.storageKey);
+    async function* entries() {
+      const pageSize = 500;
+      for (let offset = 0; ; offset += pageSize) {
+        const { items, total } = await repository.listPhotos({ limit: pageSize, offset, sort: 'oldest' });
+        for (const record of items) {
+          if (!record.storageKey) continue; // external (Drive) media has no stored bytes
           const ext = record.filename?.includes('.') ? '' : '.jpg';
-          const name = `photos/${record.id}_${record.filename || 'photo'}${ext}`;
-          entries.push({ name, data: bytes });
-        } catch {
-          // ignore missing storage keys
+          yield {
+            name: `photos/${record.id}_${record.filename || 'photo'}${ext}`,
+            open: async () => {
+              if (typeof storage.readStream === 'function') return (await storage.readStream(record.storageKey)).stream;
+              return [await storage.read(record.storageKey)];
+            },
+          };
         }
+        if (items.length === 0 || offset + items.length >= total) return;
       }
-      const zipBuffer = buildZip(entries);
-      res.set('Content-Type', 'application/zip');
-      res.set('Content-Disposition', 'attachment; filename="ims13-yearbook-backup.zip"');
-      res.send(zipBuffer);
+    }
+
+    res.set('Content-Type', 'application/zip');
+    res.set('Content-Disposition', 'attachment; filename="ims13-yearbook-backup.zip"');
+    try {
+      await pipeline(Readable.from(zipStream(entries())), res);
     } catch (err) {
+      if (res.headersSent) {
+        logger.warn(`ZIP export aborted: ${err.message}`);
+        res.destroy();
+        return;
+      }
       next(err);
     }
   });
@@ -216,14 +231,20 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
         if (req.query.proxy === '1') {
           try {
             const upstream = await fetch(record.externalThumbUrl);
-            if (upstream.ok) {
+            if (upstream.ok && upstream.body) {
               const contentType = upstream.headers.get('content-type') || 'image/jpeg';
               res.setHeader('Content-Type', contentType);
               res.setHeader('Cache-Control', 'public, max-age=86400');
-              const buffer = Buffer.from(await upstream.arrayBuffer());
-              return res.send(buffer);
+              // Stream through instead of buffering the whole image.
+              await pipeline(Readable.fromWeb(upstream.body), res);
+              return;
             }
+            upstream.body?.cancel().catch(() => {});
           } catch (err) {
+            if (res.headersSent) {
+              res.destroy();
+              return;
+            }
             logger.warn(`Failed to proxy external thumb for photo ${record.id}: ${err.message}`);
           }
         }
@@ -236,6 +257,12 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
   });
 
   router.post('/api/photos', uploadLimiter, requireAdmin, (req, res, next) => {
+    // Temp files spooled by multer are removed when the response ends, no
+    // matter which path (success, partial failure, error handler) sent it.
+    res.on('close', () => {
+      const files = Array.isArray(req.files) ? req.files : [];
+      removeQuietly(...files.map((file) => file.path));
+    });
     uploadMiddleware(req, res, (err) => (err ? next(err) : next()));
   });
 
@@ -252,6 +279,7 @@ export function photoRoutes({ config, storage, repository, uploadService, upload
       for (const file of files) {
         try {
           const record = await uploadService.uploadPhoto({
+            filePath: file.path,
             buffer: file.buffer,
             originalName: file.originalname,
             mimeType: file.mimetype,

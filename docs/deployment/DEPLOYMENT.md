@@ -21,10 +21,40 @@ Boot REFUSES to start if any invariant is violated — this is the persistence g
 
 ```
 buildCommand: npm install --include=dev --no-audit --no-fund && npm run build:check && npm prune --omit=dev
-startCommand: npm start
+startCommand: MALLOC_ARENA_MAX=2 MALLOC_MMAP_THRESHOLD_=131072 MALLOC_TRIM_THRESHOLD_=131072 node --max-old-space-size=128 --max-semi-space-size=2 server.js
+sleepApplication: true
 healthcheck:  GET /health (30s timeout)
 restart:      ON_FAILURE, max 3
 ```
+
+### RAM budget (Railway bills per MB of RAM)
+
+Measured in production mode with 2,000 photos in Postgres:
+
+| | before | after |
+|---|---|---|
+| idle after boot | ~158 MB | ~76 MB |
+| after browsing the gallery | ~196 MB | ~90 MB |
+| peak while uploading 5 x 14 MB photos + a 20 MB video | ~346 MB | ~132 MB |
+| held after that upload | ~272 MB | ~120 MB |
+
+What keeps it low (don't undo these without measuring):
+
+- **`node` directly, not `npm start`** — npm stays resident as a second process (~65 MB).
+- **No AWS SDK** — R2 is reached through `src/storage/s3-lite.js` (SigV4 signing, ~150 lines).
+- **sharp is lazy-loaded** — only loads on the first upload.
+- **Uploads spool to disk** (`os.tmpdir()/ims13-uploads`), and videos and the full-size masters
+  stream to R2 from there. Temp files are deleted when the request ends.
+- **JPEG masters are written with `optimiseCoding: false`**. Huffman optimisation buffers the
+  whole image (~130 MB for 19 MP). The output pixels are identical; files are ~5% larger.
+- **ZIP export, Drive import and the thumbnail proxy all stream**; nothing is built in RAM.
+- **One shared pg pool** (max 3, idle connections close after 10 s); the unfiltered gallery
+  list is paginated in SQL.
+- **glibc malloc env vars** make freed image buffers go back to the OS rather than staying
+  in a fragmented heap. **`--max-old-space-size=128`** caps the V8 heap; the app uses ~10–20 MB.
+- **`sleepApplication: true`** — App Sleeping stops RAM billing entirely while no one visits
+  (the first request after sleep takes a few seconds to wake the service). Keep the app free of
+  background timers or persistent outbound connections, or it can never fall asleep.
 
 Why: `npm install --include=dev` uses the lockfile while keeping Railway's cached
 `node_modules` intact; this avoids the `EBUSY node_modules/.cache` failure from `npm ci`

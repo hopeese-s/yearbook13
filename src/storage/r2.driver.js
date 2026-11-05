@@ -1,25 +1,30 @@
+import { createReadStream } from 'node:fs';
+import fs from 'node:fs/promises';
 import { assertDriverContract, normalizeKey, StorageError } from './driver.js';
+import {
+  createS3LiteClient,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+} from './s3-lite.js';
 
 /**
  * Cloudflare R2 storage (S3-compatible API) - PRODUCTION driver.
  * Selected only when STORAGE_DRIVER=r2 (see config/env.js invariants).
  *
  * `s3Client` injection exists for contract tests; production builds a real
- * client from validated R2 credentials. The SDK is imported dynamically so
- * it is loaded only when this driver is actually selected.
+ * client from validated R2 credentials. The client is our own dependency-free
+ * SigV4 implementation (./s3-lite.js) - the AWS SDK cost ~30 MB of RAM.
  */
 export async function createR2Storage(config, { s3Client } = {}) {
-  const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } = await import(
-    '@aws-sdk/client-s3'
-  );
-
   const { accountId, accessKeyId, secretAccessKey, bucket, publicBaseUrl } = config.storage.r2;
   const client =
     s3Client ??
-    new S3Client({
-      region: 'auto',
+    createS3LiteClient({
       endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-      credentials: { accessKeyId, secretAccessKey },
+      accessKeyId,
+      secretAccessKey,
     });
 
   const notFound = (err) => err?.$metadata?.httpStatusCode === 404 || err?.name === 'NotFound';
@@ -55,6 +60,27 @@ export async function createR2Storage(config, { s3Client } = {}) {
           }),
         );
         return { key: normalized, size: buffer.length };
+      } catch (err) {
+        throw new StorageError('WRITE_FAILED', `Failed to store "${normalized}" in R2: ${err.message}`, err);
+      }
+    },
+
+    /** Optional: upload a file from disk without loading it into RAM. */
+    async saveFile(key, filePath) {
+      const normalized = normalizeKey(key);
+      const contentType = mimeFromKey(normalized);
+      try {
+        const { size } = await fs.stat(filePath);
+        await client.send(
+          new PutObjectCommand({
+            Bucket: bucket,
+            Key: normalized,
+            Body: createReadStream(filePath),
+            ContentLength: size,
+            ...(contentType ? { ContentType: contentType } : {}),
+          }),
+        );
+        return { key: normalized, size };
       } catch (err) {
         throw new StorageError('WRITE_FAILED', `Failed to store "${normalized}" in R2: ${err.message}`, err);
       }

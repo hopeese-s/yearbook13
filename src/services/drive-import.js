@@ -1,4 +1,9 @@
+import { createWriteStream } from 'node:fs';
+import fs from 'node:fs/promises';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { parseDriveLink } from './drive-link.js';
+import { removeQuietly, tmpFilePath } from '../util/tmp.js';
 import { createTokenProvider } from './drive-auth.js';
 
 /**
@@ -20,7 +25,7 @@ const IMAGE_MIME_PREFIX = 'image/';
 const VIDEO_MIME_PREFIX = 'video/';
 const GOOGLE_APP_MIME_PREFIX = 'application/vnd.google-apps.';
 const MAX_FILES_PER_IMPORT = 100;
-const CONCURRENCY = 2; // each in-flight image holds its full buffer in RAM
+const CONCURRENCY = 2; // downloads go to temp files, not RAM; sharp still runs one at a time
 
 export class DriveImportError extends Error {
   constructor(code, message, status = 400) {
@@ -129,11 +134,32 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
     return res.json();
   }
 
-  async function downloadFile(fileId) {
+  /** Download to a temp file (streamed, never fully in RAM). Caller deletes it. */
+  async function downloadFile(fileId, maxBytes) {
     const res = await driveFetch(
       `/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true&acknowledgeAbuse=true`,
     );
-    return Buffer.from(await res.arrayBuffer());
+    const filePath = await tmpFilePath('drive');
+    try {
+      if (res.body && typeof res.body.getReader === 'function') {
+        let received = 0;
+        const source = Readable.fromWeb(res.body);
+        source.on('data', (chunk) => {
+          received += chunk.length;
+          if (maxBytes && received > maxBytes) {
+            source.destroy(new DriveImportError('PAYLOAD_TOO_LARGE', `File exceeds the ${maxBytes} byte limit`, 413));
+          }
+        });
+        await pipeline(source, createWriteStream(filePath));
+      } else {
+        // Minimal fetch implementations (tests) only expose arrayBuffer().
+        await fs.writeFile(filePath, Buffer.from(await res.arrayBuffer()));
+      }
+      return filePath;
+    } catch (err) {
+      await removeQuietly(filePath);
+      throw err;
+    }
   }
 
   /**
@@ -240,13 +266,17 @@ export function createDriveImportService({ config, uploadService, fetchImpl = fe
             });
           }
 
-          const buffer = await downloadFile(file.id);
-          return uploadService.uploadPhoto({
-            buffer,
-            originalName: file.name,
-            mimeType: file.mimeType,
-            metadata,
-          });
+          const filePath = await downloadFile(file.id, maxBytes);
+          try {
+            return await uploadService.uploadPhoto({
+              filePath,
+              originalName: file.name,
+              mimeType: file.mimeType,
+              metadata,
+            });
+          } finally {
+            await removeQuietly(filePath);
+          }
         }),
       );
       settled.forEach((outcome, position) => {

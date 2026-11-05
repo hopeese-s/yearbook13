@@ -14,4 +14,5 @@ cmds = [
 ]
 
 [start]
-cmd = "npm start"
+# Run node directly: "npm start" keeps an extra npm process (~40 MB) resident.
+cmd = "MALLOC_ARENA_MAX=2 MALLOC_MMAP_THRESHOLD_=131072 MALLOC_TRIM_THRESHOLD_=131072 node --max-old-space-size=128 --max-semi-space-size=2 server.js"

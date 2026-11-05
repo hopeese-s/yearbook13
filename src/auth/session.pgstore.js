@@ -1,4 +1,5 @@
 import session from 'express-session';
+import { getSharedPool } from '../data/pg-pool.js';
 
 /**
  * PostgreSQL session store - PRODUCTION (SESSION_STORE=sql, BUILD-PLAN.md U1).
@@ -6,14 +7,7 @@ import session from 'express-session';
  * `pool` injection exists for tests; the pg module is imported dynamically.
  */
 export async function createPgSessionStore(config, { pool } = {}) {
-  const { Pool } = await import('pg');
-  const db =
-    pool ??
-    new Pool({
-      connectionString: config.db.url,
-      max: 2,
-      ssl: config.db.url.includes('localhost') || config.db.url.includes('127.0.0.1') ? false : { rejectUnauthorized: false },
-    });
+  const db = pool ?? (await getSharedPool(config.db.url));
 
   await db.query(`
     CREATE TABLE IF NOT EXISTS sessions (

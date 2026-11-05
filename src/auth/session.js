@@ -1,6 +1,5 @@
 import path from 'node:path';
 import session from 'express-session';
-import FileStoreFactory from 'session-file-store';
 import { paths } from '../config/paths.js';
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -47,6 +46,8 @@ export async function sessionMiddleware(config, { fileStoreDir } = {}) {
     if (config.isProd) {
       throw new Error('SESSION_STORE="file" cannot be used in production');
     }
+    // Dev-only store: imported lazily so production never loads it.
+    const { default: FileStoreFactory } = await import('session-file-store');
     const FileStore = FileStoreFactory(session);
     return session({
       ...sharedOptions,

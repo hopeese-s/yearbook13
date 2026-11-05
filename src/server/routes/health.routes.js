@@ -18,14 +18,19 @@ export function healthRoutes(config, { repository } = {}) {
     let db_ok = null; // null = not checked (no repository wired)
 
     if (repository && typeof repository.countPhotos === 'function') {
+      let timer;
       try {
         await Promise.race([
           repository.countPhotos(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000)),
+          new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error('timeout')), 2000);
+          }),
         ]);
         db_ok = true;
       } catch {
         db_ok = false;
+      } finally {
+        clearTimeout(timer);
       }
     }
 

@@ -1,6 +1,13 @@
 /**
  * Native, zero-dependency ZIP archive builder (STORE / uncompressed mode).
  * Perfect for archiving already-compressed photo formats (JPEG, PNG, WebP).
+ *
+ * Two flavours:
+ *   buildZip(entries)       -> Buffer (small archives / tests)
+ *   zipStream(entries)      -> async iterable of Buffers. Each entry's bytes
+ *                              are streamed through with a running CRC and a
+ *                              trailing data descriptor, so memory stays flat
+ *                              no matter how big the backup is.
  */
 
 const CRC_TABLE = new Uint32Array(256);
@@ -12,8 +19,9 @@ for (let n = 0; n < 256; n++) {
   CRC_TABLE[n] = c;
 }
 
-export function crc32(buffer) {
-  let crc = 0xffffffff;
+/** Incremental CRC-32: pass the previous result as `previous` to continue. */
+export function crc32(buffer, previous = 0) {
+  let crc = (previous ^ 0xffffffff) >>> 0;
   for (let i = 0; i < buffer.length; i++) {
     crc = CRC_TABLE[(crc ^ buffer[i]) & 0xff] ^ (crc >>> 8);
   }
@@ -121,4 +129,100 @@ export function buildZip(entries) {
   parts.push(eocd);
 
   return Buffer.concat(parts);
+}
+
+const FLAG_DATA_DESCRIPTOR = 0x08;
+const FLAG_UTF8 = 0x800;
+const ZIP32_LIMIT = 0xffffffff;
+
+function centralDirectory(cdEntries, cdOffset) {
+  const parts = [];
+  let cdSize = 0;
+  for (const cd of cdEntries) {
+    const cdHeader = Buffer.alloc(46 + cd.nameBuffer.length);
+    cdHeader.writeUInt32LE(0x02014b50, 0);
+    cdHeader.writeUInt16LE(20, 4);
+    cdHeader.writeUInt16LE(20, 6);
+    cdHeader.writeUInt16LE(cd.flags, 8);
+    cdHeader.writeUInt16LE(0, 10);
+    cdHeader.writeUInt16LE(cd.time, 12);
+    cdHeader.writeUInt16LE(cd.d, 14);
+    cdHeader.writeUInt32LE(cd.checksum, 16);
+    cdHeader.writeUInt32LE(cd.size, 20);
+    cdHeader.writeUInt32LE(cd.size, 24);
+    cdHeader.writeUInt16LE(cd.nameBuffer.length, 28);
+    cdHeader.writeUInt32LE(cd.offset, 42);
+    cd.nameBuffer.copy(cdHeader, 46);
+    parts.push(cdHeader);
+    cdSize += cdHeader.length;
+  }
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(cdEntries.length, 8);
+  eocd.writeUInt16LE(cdEntries.length, 10);
+  eocd.writeUInt32LE(cdSize, 12);
+  eocd.writeUInt32LE(cdOffset, 16);
+  parts.push(eocd);
+  return parts;
+}
+
+/**
+ * Stream a ZIP archive. `entries` is an (async) iterable of
+ * { name, open: async () => AsyncIterable<Buffer|Uint8Array>, date? }.
+ * An entry whose open() throws is skipped (e.g. object missing in storage).
+ * Throws if the archive would exceed the 4 GB ZIP32 limit rather than emit a
+ * corrupt file.
+ */
+export async function* zipStream(entries) {
+  const cdEntries = [];
+  let offset = 0;
+
+  for await (const entry of entries) {
+    let source;
+    try {
+      source = await entry.open();
+    } catch {
+      continue;
+    }
+    const filename = String(entry.name ?? 'file').replace(/\\/g, '/');
+    const nameBuffer = Buffer.from(filename, 'utf8');
+    const { time, d } = dosDateTime(entry.date);
+    const flags = FLAG_DATA_DESCRIPTOR | FLAG_UTF8;
+
+    const localHeader = Buffer.alloc(30 + nameBuffer.length);
+    localHeader.writeUInt32LE(0x04034b50, 0);
+    localHeader.writeUInt16LE(20, 4);
+    localHeader.writeUInt16LE(flags, 6);
+    localHeader.writeUInt16LE(0, 8); // STORE
+    localHeader.writeUInt16LE(time, 10);
+    localHeader.writeUInt16LE(d, 12);
+    // CRC + sizes are 0 here and follow the data in the data descriptor.
+    localHeader.writeUInt16LE(nameBuffer.length, 26);
+    nameBuffer.copy(localHeader, 30);
+    yield localHeader;
+
+    let checksum = 0;
+    let size = 0;
+    for await (const chunk of source) {
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      checksum = crc32(buf, checksum);
+      size += buf.length;
+      if (offset + localHeader.length + size > ZIP32_LIMIT) {
+        throw new Error('Backup exceeds the 4 GB ZIP limit');
+      }
+      yield buf;
+    }
+
+    const descriptor = Buffer.alloc(16);
+    descriptor.writeUInt32LE(0x08074b50, 0);
+    descriptor.writeUInt32LE(checksum, 4);
+    descriptor.writeUInt32LE(size, 8);
+    descriptor.writeUInt32LE(size, 12);
+    yield descriptor;
+
+    cdEntries.push({ nameBuffer, checksum, size, offset, time, d, flags });
+    offset += localHeader.length + size + descriptor.length;
+  }
+
+  for (const part of centralDirectory(cdEntries, offset)) yield part;
 }

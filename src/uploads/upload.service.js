@@ -1,7 +1,8 @@
-import sharp from 'sharp';
-import { processImage, newPhotoId } from '../images/pipeline.js';
+import fs from 'node:fs/promises';
+import { processImage, newPhotoId, loadSharp } from '../images/pipeline.js';
 import { validatePhotoInput, createPhotoRecord } from '../domain/photos.js';
 import { logger } from '../util/logger.js';
+import { readHead, removeQuietly, tmpFilePath } from '../util/tmp.js';
 
 const EXTENSION_BY_FORMAT = { jpeg: 'jpg', png: 'png', webp: 'webp' };
 export const VIDEO_EXTS = new Set(['mp4', 'webm', 'mov', 'm4v', 'mkv', 'avi', '3gp']);
@@ -34,6 +35,7 @@ export function isVideoContent({ buffer, originalName = '', mimeType = '' } = {}
 }
 
 export async function createVideoPoster(filename) {
+  const sharp = await loadSharp();
   try {
     const label = String(filename ?? 'Video').slice(0, 32).replace(/[<>&'"]/g, '');
     const svg = `
@@ -77,16 +79,31 @@ export async function createVideoPoster(filename) {
  * failed upload never leaves orphan objects or partial metadata.
  */
 export function createUploadService({ storage, repository }) {
-  async function uploadPhoto({ buffer, originalName, mimeType, metadata }) {
+  /** Store an object from a Buffer or a file on disk (streamed when supported). */
+  async function saveObject(key, { buffer, filePath }) {
+    if (filePath) {
+      if (typeof storage.saveFile === 'function') return storage.saveFile(key, filePath);
+      return storage.save(key, await fs.readFile(filePath));
+    }
+    return storage.save(key, buffer);
+  }
+
+  /**
+   * Accepts either `buffer` or `filePath` (preferred: the upload stays on disk
+   * and never sits in RAM). The caller owns `filePath` and deletes it.
+   */
+  async function uploadPhoto({ buffer, filePath, originalName, mimeType, metadata }) {
     const { value: meta, errors } = validatePhotoInput(metadata);
     if (errors.length > 0) {
       throw Object.assign(new Error(errors.join('; ')), { code: 'INVALID_METADATA', status: 400 });
     }
 
     const id = newPhotoId();
-    const isVideo = isVideoContent({ buffer, originalName, mimeType });
+    const head = filePath ? await readHead(filePath) : buffer;
+    const isVideo = isVideoContent({ buffer: head, originalName, mimeType });
 
-    let fullBuffer;
+    let fullSource;
+    let fullTmp;
     let thumbBuffer;
     let storageKey;
     let thumbKey;
@@ -100,14 +117,26 @@ export function createUploadService({ storage, repository }) {
       if (!ext || !VIDEO_EXTS.has(ext)) ext = 'mp4';
       storageKey = `photos/full/${id}.${ext}`;
       thumbKey = `photos/thumb/${id}.webp`;
-      fullBuffer = buffer;
+      fullSource = { buffer, filePath };
       thumbBuffer = await createVideoPoster(originalName);
     } else {
-      const processed = await processImage(buffer);
+      let processed;
+      if (filePath) {
+        fullTmp = await tmpFilePath('img');
+        try {
+          processed = await processImage({ path: filePath }, { outputPath: fullTmp });
+        } catch (err) {
+          await removeQuietly(fullTmp);
+          throw err;
+        }
+        fullSource = { filePath: fullTmp };
+      } else {
+        processed = await processImage(buffer);
+        fullSource = { buffer: processed.full.buffer };
+      }
       const ext = EXTENSION_BY_FORMAT[processed.format] ?? 'jpg';
       storageKey = `photos/full/${id}.${ext}`;
       thumbKey = `photos/thumb/${id}.${ext}`;
-      fullBuffer = processed.full.buffer;
       thumbBuffer = processed.thumb.buffer;
       width = processed.full.width;
       height = processed.full.height;
@@ -117,7 +146,7 @@ export function createUploadService({ storage, repository }) {
 
     const savedKeys = [];
     try {
-      await storage.save(storageKey, fullBuffer);
+      await saveObject(storageKey, fullSource);
       savedKeys.push(storageKey);
       await storage.save(thumbKey, thumbBuffer);
       savedKeys.push(thumbKey);
@@ -139,6 +168,8 @@ export function createUploadService({ storage, repository }) {
     } catch (err) {
       await Promise.allSettled(savedKeys.map((key) => storage.delete(key)));
       throw err;
+    } finally {
+      await removeQuietly(fullTmp);
     }
   }
 
