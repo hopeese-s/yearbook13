@@ -258,3 +258,55 @@ test('createVideoPoster handles Thai characters and special symbols', async () =
   assert.ok(poster2.length > 0);
 });
 
+
+test('uploadPhoto from a file on disk (no RAM buffering) stores image + thumb and cleans its temp output', async () => {
+  const fs = await import('node:fs/promises');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const { UPLOAD_TMP_DIR } = await import('../../src/util/tmp.js');
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ims13-diskup-'));
+  try {
+    const saved = new Map();
+    const storage = {
+      name: 'fake',
+      save: async (key, buffer) => {
+        saved.set(key, Buffer.from(buffer));
+        return { key, size: buffer.length };
+      },
+      saveFile: async (key, filePath) => {
+        const bytes = await fs.readFile(filePath);
+        saved.set(key, bytes);
+        return { key, size: bytes.length };
+      },
+      read: async () => Buffer.alloc(0),
+      delete: async () => {},
+      exists: async () => true,
+      stat: async (key) => ({ key, size: 1 }),
+      publicUrl: () => null,
+    };
+    const records = [];
+    const repository = { createPhoto: async (r) => records.push(r) && r, deletePhoto: async () => true };
+    const service = createUploadService({ storage, repository });
+
+    const before = new Set(await fs.readdir(UPLOAD_TMP_DIR).catch(() => []));
+    const jpegPath = path.join(dir, 'in.jpg');
+    await fs.writeFile(jpegPath, await makeJpeg(800, 500));
+    const record = await service.uploadPhoto({ filePath: jpegPath, originalName: 'in.jpg', metadata: { caption: 'disk' } });
+    assert.equal(record.width, 800);
+    assert.equal(record.height, 500);
+    const full = await sharp(saved.get(record.storageKey)).metadata();
+    assert.equal(full.format, 'jpeg');
+    assert.ok(saved.get(record.thumbKey).length > 0);
+    const after = (await fs.readdir(UPLOAD_TMP_DIR).catch(() => [])).filter((f) => !before.has(f) && f.endsWith('.img'));
+    assert.deepEqual(after, [], 'processed master temp file was removed');
+
+    const videoPath = path.join(dir, 'clip.mp4');
+    const videoBytes = Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from('ftypmp42'), Buffer.alloc(5000, 1)]);
+    await fs.writeFile(videoPath, videoBytes);
+    const video = await service.uploadPhoto({ filePath: videoPath, originalName: 'clip.mp4', metadata: {} });
+    assert.equal(video.mediaType, 'video');
+    assert.ok(saved.get(video.storageKey).equals(videoBytes), 'video bytes streamed from disk unchanged');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});

@@ -1,5 +1,6 @@
 import { assertRepository } from './repository.js';
 import { migrate } from './schema.js';
+import { getSharedPool } from './pg-pool.js';
 
 /**
  * SQL (PostgreSQL) PhotoRepository - PRODUCTION store (DB_DRIVER=sql).
@@ -8,18 +9,11 @@ import { migrate } from './schema.js';
  * changes as it grows.
  *
  * `pool` injection exists for tests; production builds a real Pool from
- * the validated DB_URL. The `pg` module is imported dynamically so it is
- * loaded only when this driver is actually selected.
+ * the validated DB_URL (one pool shared with the session store, see
+ * pg-pool.js). The `pg` module loads only when this driver is selected.
  */
 export async function createSqlRepository(config, { pool } = {}) {
-  const { Pool } = await import('pg');
-  const db =
-    pool ??
-    new Pool({
-      connectionString: config.db.url,
-      max: 3,
-      ssl: config.db.url.includes('localhost') || config.db.url.includes('127.0.0.1') ? false : { rejectUnauthorized: false },
-    });
+  const db = pool ?? (await getSharedPool(config.db.url));
 
   await db.query(`
     CREATE TABLE IF NOT EXISTS photos (
@@ -52,12 +46,34 @@ export async function createSqlRepository(config, { pool } = {}) {
     },
 
     async listPhotos(query = {}) {
-      // Yearbook scale is small; filtering happens after load, identical
-      // semantics to the JSON repository (documented trade-off).
+      const { collection, tag, category, section, year, personId, search, sort = 'newest' } = query;
+      const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 5000);
+      const offset = Math.max(Number(query.offset) || 0, 0);
+      const hasFilter =
+        collection || tag || category || section || personId || (year !== undefined && year !== null && year !== '') ||
+        (search && String(search).trim());
+
+      if (!hasFilter) {
+        // Fast path (the public gallery): sort + paginate in PostgreSQL so only
+        // one page of rows is transferred and parsed instead of every photo.
+        // COLLATE "C" = plain code-point order, matching the JS comparison below.
+        const dir = sort === 'oldest' ? 'ASC' : 'DESC';
+        const [{ rows }, { rows: countRows }] = await Promise.all([
+          db.query(
+            `SELECT data FROM photos ORDER BY data->>'createdAt' COLLATE "C" ${dir}, id COLLATE "C" ${dir} LIMIT $1 OFFSET $2`,
+            [limit, offset],
+          ),
+          db.query('SELECT count(*)::int AS count FROM photos'),
+        ]);
+        const items = rows.map((row) => migrate(row.data)).filter(Boolean);
+        return { items, total: countRows[0].count, limit, offset };
+      }
+
+      // Filtered queries: yearbook scale is small, so filtering happens after
+      // load with semantics identical to the JSON repository.
       const { rows } = await db.query('SELECT data FROM photos');
       let items = rows.map((row) => migrate(row.data)).filter(Boolean);
       const matchesLabel = (list, wanted) => list.some((item) => item.toLowerCase() === wanted.toLowerCase());
-      const { collection, tag, category, section, year, personId, search, sort = 'newest' } = query;
 
       if (collection) items = items.filter((r) => matchesLabel(r.collections, collection));
       if (tag) items = items.filter((r) => matchesLabel(r.tags, tag));
@@ -86,8 +102,6 @@ export async function createSqlRepository(config, { pool } = {}) {
       });
 
       const total = items.length;
-      const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 5000);
-      const offset = Math.max(Number(query.offset) || 0, 0);
       return { items: items.slice(offset, offset + limit), total, limit, offset };
     },
 
